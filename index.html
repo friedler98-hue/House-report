@@ -1,66 +1,27 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>House Report – דף הבית</title>
-    <link rel="stylesheet" href="assets/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>House Report - דף הבית</title>
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
 
-<body>
-
-<header>
+<body data-page="index">
+  <header>
     <h1>בחר מתקן</h1>
     <nav>
-        <a href="#" id="allReportsLink">כל הדיווחים</a>
-        <a href="index.html" class="active">דף הבית</a>
+      <a href="all_reports.html" id="allReportsLink">כל הדיווחים</a>
+      <a href="index.html" class="active">דף הבית</a>
     </nav>
-</header>
+  </header>
 
-<main>
-    <p class="subtitle">בחר את הדירה כדי להיכנס לדיווח תקלות או לצפות בדיווחים קיימים</p>
+  <main>
+    <p class="subtitle">בחר את הדירה כדי להיכנס לדיווח תקלות או לצפייה בדיווחים קיימים</p>
 
-    <div class="site-grid">
+    <div class="sites-grid"></div>
+  </main>
 
-        <a href="site.html?site=50" class="site-card"><span>דירת 50</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=55" class="site-card"><span>דירת 55</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=56" class="site-card"><span>דירת 56</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=51" class="site-card"><span>דירת 51</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=95" class="site-card"><span>דירת 95</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=45" class="site-card"><span>דירת 45</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=42" class="site-card"><span>דירת 42</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=500" class="site-card"><span>דירת 500</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=800" class="site-card"><span>דירת 800</span><small>כניסה לדיווח</small></a>
-
-        <a href="site.html?site=900" class="site-card"><span>דירת 900</span><small>כניסה לדיווח</small></a>
-
-    </div>
-</main>
-
-<!-- חשוב: ראשון נטען JS, אחרי זה נרשמת הפעולה -->
-<script src="app.js"></script>
-
-<script>
-    document.getElementById("allReportsLink").addEventListener("click", function (e) {
-
-        // אם הסיסמה לא מאושרת – מבטלים מעבר לדף
-        if (!checkAllReportsPassword()) {
-            e.preventDefault();
-            return;
-        }
-
-        // אם נכונה – ממשיכים לדף
-        window.location.href = "all_reports.html";
-    });
-</script>
-
+  <script src="app.js"></script>
 </body>
 </html>
