@@ -2,7 +2,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyP83RAgg54-TB0JJDsPpzb
 
 // פה אתה שם את השמות כמו “רותם, דפנה, סביון…”
 // תשאיר כמו שזה ותערוך ידנית:
-const SITES = ["רותם","דפנה","סביון","נוף","אורן","ברוש"];
+const SITES = ["דירת 50","דירת 56","דירת 51","דירת 500","דירת 900","דירת 800"];
 
 function qs(name){ return new URLSearchParams(location.search).get(name); }
 
