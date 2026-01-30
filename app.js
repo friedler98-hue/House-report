@@ -1,52 +1,47 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbypP83RAgg54-TB0JJDsPpzbduQsH1SnYvbCXS8IZSrDQpm2l2k-xJyPW40w0Bg_BPKbSw/exec";
+const API_URL = "שים-פה-את-ה-URL-שלך-שנגמר-ב-exec";
 
-const SITES = [
-  "אדמין",
-  "חלקות קומה 1",
-  "חלקות קומה 2",
-  "חלקות קומה 3",
-  "חצר",
-  "מרתף",
-  "מחסן",
-  "חניה"
-];
+// פה אתה שם את השמות כמו “רותם, דפנה, סביון…”
+// תשאיר כמו שזה ותערוך ידנית:
+const SITES = ["רותם","דפנה","סביון","נוף","אורן","ברוש"];
 
-// שולף פרמטר מה-URL
-function qs(name) { 
-  return new URLSearchParams(location.search).get(name); 
+function qs(name){ return new URLSearchParams(location.search).get(name); }
+
+async function apiGetList(site=""){
+  const url = `${API_URL}?action=list&site=${encodeURIComponent(site)}`;
+  const r = await fetch(url);
+  return await r.json();
 }
 
-// פונקציה לפורמט זמן
-function formatTime(iso) {
-  const d = new Date(iso);
-  if (isNaN(d)) return "";
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
-  const ymd = d.toISOString().slice(0, 10);
-  return `${hh}:${mm}:${ss} (${ymd})`;
-}
-
-async function apiList(site) {
-  const url = `${API_URL}?action=list&site=${encodeURIComponent(site || "")}`;
-  const res = await fetch(url);
-  return await res.json();
-}
-
-async function apiCreate(payload) {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "createreport", ...payload })
+async function apiCreate(payload){
+  const r = await fetch(API_URL,{
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify({action:"createreport", ...payload})
   });
-  return await res.json();
+  return await r.json();
 }
 
-async function apiSetStatus(id, status) {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "setstatus", id, status })
+async function apiSetStatus(id,status){
+  const r = await fetch(API_URL,{
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify({action:"setstatus", id, status})
   });
-  return await res.json();
+  return await r.json();
+}
+
+function el(html){
+  const t=document.createElement("template");
+  t.innerHTML=html.trim();
+  return t.content.firstChild;
+}
+
+function fmt(iso){
+  const d=new Date(iso);
+  if(isNaN(d)) return "";
+  const dd=String(d.getDate()).padStart(2,"0");
+  const mm=String(d.getMonth()+1).padStart(2,"0");
+  const hh=String(d.getHours()).padStart(2,"0");
+  const mi=String(d.getMinutes()).padStart(2,"0");
+  return `${dd}/${mm} ${hh}:${mi}`;
 }
