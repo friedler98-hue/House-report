@@ -1,78 +1,94 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>House Report - דף הבית</title>
-  <link rel="stylesheet" href="assets/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>House Report – דף הבית</title>
+    <link rel="stylesheet" href="assets/style.css">
 </head>
+
 <body>
 
 <header>
-  <h1>בחר מתקן</h1>
-  <nav>
-    <a href="all_reports.html">כל הדיווחים</a>
-    <a href="index.html" class="active">דף הבית</a>
-  </nav>
+    <h1>בחר מתקן</h1>
+    <nav>
+        <a href="all_reports.html" id="allReportsLink">כל הדיווחים</a>
+        <a href="index.html" class="active">דף הבית</a>
+    </nav>
 </header>
 
 <main>
-  <p class="subtitle">בחר את הדירה כדי להיכנס לדיווח תקלה או לצפייה בדיווחים קיימים</p>
+    <p class="subtitle">בחר את הדירה כדי להיכנס לדיווח תקלות או לצפות בדיווחים קיימים</p>
 
-  <div class="sites-grid">
+    <div class="site-grid">
 
-    <a href="site.html?site=דירת%2050" class="site-card card-hover">
-      <span>דירת 50</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=50" class="site-card">
+            <span>דירת 50</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%2055" class="site-card card-hover">
-      <span>דירת 55</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=55" class="site-card">
+            <span>דירת 55</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%2056" class="site-card card-hover">
-      <span>דירת 56</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=56" class="site-card">
+            <span>דירת 56</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%2051" class="site-card card-hover">
-      <span>דירת 51</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=51" class="site-card">
+            <span>דירת 51</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%2095" class="site-card card-hover">
-      <span>דירת 95</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=95" class="site-card">
+            <span>דירת 95</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%2045" class="site-card card-hover">
-      <span>דירת 45</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=45" class="site-card">
+            <span>דירת 45</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%2042" class="site-card card-hover">
-      <span>דירת 42</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=42" class="site-card">
+            <span>דירת 42</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%20500" class="site-card card-hover">
-      <span>דירת 500</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=500" class="site-card">
+            <span>דירת 500</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%20800" class="site-card card-hover">
-      <span>דירת 800</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=800" class="site-card">
+            <span>דירת 800</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-    <a href="site.html?site=דירת%20900" class="site-card card-hover">
-      <span>דירת 900</span>
-      <small>כניסה לדיווח</small>
-    </a>
+        <a href="site.html?site=900" class="site-card">
+            <span>דירת 900</span>
+            <small>כניסה לדיווח</small>
+        </a>
 
-  </div>
+    </div>
 </main>
+
+<!-- טוען את app.js -->
+<script src="app.js"></script>
+
+<script>
+    // חוסם את הדף "כל הדיווחים" בסיסמה
+    const link = document.getElementById("allReportsLink");
+    if (link) {
+        link.addEventListener("click", function (e) {
+            if (!checkAllReportsPassword()) {
+                e.preventDefault();
+            }
+        });
+    }
+</script>
 
 </body>
 </html>
