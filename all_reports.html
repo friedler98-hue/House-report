@@ -3,201 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>House Report - כל הדיווחים</title>
+  <title>כל הדיווחים</title>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
-<body>
 
-<header>
-  <h1>כל הדיווחים</h1>
-  <nav>
-    <a href="all_reports.html" class="active">כל הדיווחים</a>
-    <a href="index.html">דף הבית</a>
-  </nav>
-</header>
+<body data-page="all">
+  <header>
+    <h1>כל הדיווחים</h1>
+    <nav>
+      <a href="all_reports.html" class="active">כל הדיווחים</a>
+      <a href="index.html">דף הבית</a>
+    </nav>
+  </header>
 
-<main>
-  <div class="panel">
-    <div class="grid-2">
-      <div>
-        <label>סינון לפי דירה</label>
-        <select id="filterSite"></select>
+  <main>
+    <div class="card">
+      <div class="filters">
+        <div class="filter">
+          <label>סינון לפי דירה</label>
+          <select id="filterSite"></select>
+        </div>
+
+        <div class="filter">
+          <label>סטטוס</label>
+          <select id="filterStatus"></select>
+        </div>
+
+        <div class="filter">
+          <button id="runFilter">רענן</button>
+        </div>
       </div>
-      <div>
-        <label>סטטוס</label>
-        <select id="filterStatus">
-          <option value="">הכל</option>
-          <option value="חדש">חדש</option>
-          <option value="בטיפול">בטיפול</option>
-          <option value="טופל">טופל</option>
-        </select>
+
+      <div class="table-wrap">
+        <table id="allTable">
+          <thead>
+            <tr>
+              <th>זמן</th>
+              <th>דירה</th>
+              <th>אזור</th>
+              <th>סוג</th>
+              <th>תיאור</th>
+              <th>דחיפות</th>
+              <th>סטטוס</th>
+              <th>עדכון</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
+  </main>
 
-    <div class="actions">
-      <button id="btnRefresh">רענן</button>
-      <span id="msg" class="small-muted"></span>
-    </div>
-
-    <table class="table" id="tbl">
-      <thead>
-        <tr>
-          <th>זמן</th>
-          <th>דירה</th>
-          <th>אזור</th>
-          <th>סוג</th>
-          <th>תיאור</th>
-          <th>דחיפות</th>
-          <th>סטטוס</th>
-          <th>עדכון</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</main>
-
-<script src="app.js"></script>
-<script>
-  // בנייה של תפריט הסינון לפי הרשימה ב-app.js
-  const filterSite = document.getElementById('filterSite');
-  const filterStatus = document.getElementById('filterStatus');
-  const btnRefresh = document.getElementById('btnRefresh');
-  const msg = document.getElementById('msg');
-  const tbody = document.querySelector('#tbl tbody');
-
-  function fillSites(){
-    filterSite.innerHTML = '';
-    const optAll = document.createElement('option');
-    optAll.value = '';
-    optAll.textContent = 'הכל';
-    filterSite.appendChild(optAll);
-
-    SITES.forEach(s=>{
-      const o = document.createElement('option');
-      o.value = s;
-      o.textContent = s;
-      filterSite.appendChild(o);
-    });
-  }
-
-  function badgeClass(status){
-    if(status === 'טופל') return 'ok';
-    if(status === 'בטיפול') return 'warn';
-    return 'danger'; // חדש / ריק
-  }
-
-  function fmtTime(v){
-    try{
-      const d = new Date(v);
-      if(!isNaN(d.getTime())) return d.toLocaleString('he-IL');
-    }catch(e){}
-    return String(v || '');
-  }
-
-  async function load(){
-    msg.textContent = 'טוען...';
-    tbody.innerHTML = '';
-    const site = filterSite.value || '';
-    const st = filterStatus.value || '';
-
-    const res = await apiGetList(site);
-    if(!res || res.ok !== true){
-      msg.textContent = 'שגיאה בטעינה';
-      return;
-    }
-
-    let rows = res.data || [];
-    if(st){
-      rows = rows.filter(r => String(r.status||'').trim() === st);
-    }
-
-    if(rows.length === 0){
-      msg.textContent = 'אין נתונים להצגה';
-      return;
-    }
-
-    rows.sort((a,b)=> Number(b.id||0) - Number(a.id||0));
-
-    for(const r of rows){
-      const tr = document.createElement('tr');
-
-      const tdTime = document.createElement('td');
-      tdTime.textContent = fmtTime(r.timestamp);
-
-      const tdSite = document.createElement('td');
-      tdSite.textContent = r.site || '';
-
-      const tdArea = document.createElement('td');
-      tdArea.textContent = r.area || '';
-
-      const tdType = document.createElement('td');
-      tdType.textContent = r.type || '';
-
-      const tdDesc = document.createElement('td');
-      tdDesc.textContent = r.desc || '';
-
-      const tdUrg = document.createElement('td');
-      tdUrg.textContent = r.urgency || '';
-
-      const tdStatus = document.createElement('td');
-      const b = document.createElement('span');
-      b.className = 'badge ' + badgeClass(String(r.status||'חדש').trim() || 'חדש');
-      b.textContent = String(r.status||'חדש').trim() || 'חדש';
-      tdStatus.appendChild(b);
-
-      const tdUpd = document.createElement('td');
-      const sel = document.createElement('select');
-      ['חדש','בטיפול','טופל'].forEach(s=>{
-        const o=document.createElement('option');
-        o.value=s; o.textContent=s;
-        if(String(r.status||'חדש').trim()===s) o.selected=true;
-        sel.appendChild(o);
-      });
-
-      const btn = document.createElement('button');
-      btn.textContent = 'שמור';
-      btn.style.padding = '8px 10px';
-      btn.style.borderRadius = '8px';
-
-      btn.onclick = async ()=>{
-        btn.disabled = true;
-        btn.textContent = 'שומר...';
-        const out = await apiSetStatus({ id: r.id, status: sel.value });
-        if(out && out.ok === true){
-          b.textContent = sel.value;
-          b.className = 'badge ' + badgeClass(sel.value);
-        }else{
-          alert('עדכון נכשל');
-        }
-        btn.disabled = false;
-        btn.textContent = 'שמור';
-      };
-
-      tdUpd.appendChild(sel);
-      tdUpd.appendChild(document.createElement('div')).style.height='6px';
-      tdUpd.appendChild(btn);
-
-      tr.appendChild(tdTime);
-      tr.appendChild(tdSite);
-      tr.appendChild(tdArea);
-      tr.appendChild(tdType);
-      tr.appendChild(tdDesc);
-      tr.appendChild(tdUrg);
-      tr.appendChild(tdStatus);
-      tr.appendChild(tdUpd);
-
-      tbody.appendChild(tr);
-    }
-
-    msg.textContent = 'נטען בהצלחה';
-  }
-
-  fillSites();
-  btnRefresh.onclick = load;
-  filterSite.onchange = load;
-  filterStatus.onchange = load;
-  load();
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
