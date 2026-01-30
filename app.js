@@ -1,5 +1,5 @@
 // ---- API URL ----
-const API_URL = "https://script.google.com/macros/s/AKfycbypP83RAgg54-TB0JJDspPzbudQsH1SnYvbCXS8IZsDrQpm2IZk-xJvPW40w0bG_BPkBsw/exec
+const API_URL = "https://script.google.com/macros/s/AKfycbxdJAq5l6Hym-50CBfBFVXgjgXm9gWe6mtqVXijE0nlnlt7hvIIXBgYoUfP25eVdjtY2A/exec
 ";
 
 // ---- סיסמה לדף "כל הדיווחים" ----
