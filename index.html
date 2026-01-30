@@ -1,51 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>House Report</title>
-    <link rel="stylesheet" href="assets/style.css" />
-    <script src="app.js" defer></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>בחירת מתקן</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
-
 <body>
+<nav class="container py-3 d-flex gap-3">
+  <a href="./index.html">דף הבית</a>
+  <a href="./all_reports.html">כל התקלות</a>
+</nav>
 
-    <header class="top">
-        <h1>House Report</h1>
-        <select id="siteSelect"></select>
-    </header>
+<div class="container">
+  <h3 class="mb-2">בחר מתקן</h3>
+  <div class="small-muted mb-3">בחר מתקן כדי להיכנס לדשבורד ולדווח על תקלות או חוסרים.</div>
+  <div id="grid" class="row g-3"></div>
+</div>
 
-    <section id="reportList"></section>
-
-    <button id="newReportBtn" class="fab">+</button>
-
-    <div id="newReportModal" class="modal hidden">
-        <div class="modal-content">
-            <h2>דיווח חדש</h2>
-            <label>קטגוריה</label>
-            <input id="nrType" placeholder="קטגוריה">
-
-            <label>פריט</label>
-            <input id="nrItem" placeholder="פריט">
-
-            <label>תיאור</label>
-            <textarea id="nrDesc" placeholder="תיאור"></textarea>
-
-            <label>דחיפות</label>
-            <select id="nrUrgency">
-                <option value="גבוהה">גבוהה</option>
-                <option value="בינונית">בינונית</option>
-                <option value="נמוכה">נמוכה</option>
-            </select>
-
-            <label>קישור תמונה</label>
-            <input id="nrImageUrl" placeholder="https://">
-
-            <button id="saveReport">שמור</button>
-            <button id="closeModal">סגור</button>
+<script src="./app.js"></script>
+<script>
+  const grid = document.getElementById("grid");
+  SITES.forEach(name=>{
+    const card = el(`
+      <div class="col-12 col-md-4">
+        <div class="card card-hover" role="button">
+          <div class="card-body">
+            <div class="fw-bold">${name}</div>
+            <div class="small-muted">כניסה לדשבורד</div>
+          </div>
         </div>
-    </div>
-
-    <script src="app.js"></script>
+      </div>
+    `);
+    card.querySelector(".card").onclick=()=>location.href=`./site.html?site=${encodeURIComponent(name)}`;
+    grid.appendChild(card);
+  });
+</script>
 </body>
 </html>
