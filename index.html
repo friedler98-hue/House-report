@@ -12,7 +12,7 @@
 <header>
     <h1>בחר מתקן</h1>
     <nav>
-        <a href="all_reports.html" id="allReportsLink">כל הדיווחים</a>
+        <a href="#" id="allReportsLink">כל הדיווחים</a>
         <a href="index.html" class="active">דף הבית</a>
     </nav>
 </header>
@@ -22,72 +22,44 @@
 
     <div class="site-grid">
 
-        <a href="site.html?site=50" class="site-card">
-            <span>דירת 50</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=50" class="site-card"><span>דירת 50</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=55" class="site-card">
-            <span>דירת 55</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=55" class="site-card"><span>דירת 55</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=56" class="site-card">
-            <span>דירת 56</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=56" class="site-card"><span>דירת 56</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=51" class="site-card">
-            <span>דירת 51</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=51" class="site-card"><span>דירת 51</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=95" class="site-card">
-            <span>דירת 95</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=95" class="site-card"><span>דירת 95</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=45" class="site-card">
-            <span>דירת 45</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=45" class="site-card"><span>דירת 45</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=42" class="site-card">
-            <span>דירת 42</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=42" class="site-card"><span>דירת 42</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=500" class="site-card">
-            <span>דירת 500</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=500" class="site-card"><span>דירת 500</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=800" class="site-card">
-            <span>דירת 800</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=800" class="site-card"><span>דירת 800</span><small>כניסה לדיווח</small></a>
 
-        <a href="site.html?site=900" class="site-card">
-            <span>דירת 900</span>
-            <small>כניסה לדיווח</small>
-        </a>
+        <a href="site.html?site=900" class="site-card"><span>דירת 900</span><small>כניסה לדיווח</small></a>
 
     </div>
 </main>
 
-<!-- טוען את app.js -->
+<!-- חשוב: ראשון נטען JS, אחרי זה נרשמת הפעולה -->
 <script src="app.js"></script>
 
 <script>
-    // חוסם את הדף "כל הדיווחים" בסיסמה
-    const link = document.getElementById("allReportsLink");
-    if (link) {
-        link.addEventListener("click", function (e) {
-            if (!checkAllReportsPassword()) {
-                e.preventDefault();
-            }
-        });
-    }
+    document.getElementById("allReportsLink").addEventListener("click", function (e) {
+
+        // אם הסיסמה לא מאושרת – מבטלים מעבר לדף
+        if (!checkAllReportsPassword()) {
+            e.preventDefault();
+            return;
+        }
+
+        // אם נכונה – ממשיכים לדף
+        window.location.href = "all_reports.html";
+    });
 </script>
 
 </body>
