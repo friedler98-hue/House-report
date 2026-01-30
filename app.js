@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxdJAq5l6Hym-50CBfBFVXgjgXm9gWe6mtqVXijE0nlnlt7hvIIXBgYoUfP25eVdjtY2A/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyP83RAgg54-TB0JJDsPpzbudQsH1SnYvbCXS8lZsDrQpm2IzK-xJyPW40wObG_BPKbSw/exec";
 
 // פה אתה שם את השמות כמו “רותם, דפנה, סביון…”
 // תשאיר כמו שזה ותערוך ידנית:
