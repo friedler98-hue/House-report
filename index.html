@@ -1,12 +1,50 @@
-<!doctype html>
-<html lang="he">
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>דיווח תקלות</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>House Report</title>
+    <link rel="stylesheet" href="assets/style.css" />
 </head>
+
 <body>
-  <h1>האתר פעיל</h1>
-  <p>GitHub Pages עובד.</p>
+
+    <header class="top">
+        <h1>House Report</h1>
+        <select id="siteSelect"></select>
+    </header>
+
+    <section id="reportList"></section>
+
+    <button id="newReportBtn" class="fab">+</button>
+
+    <div id="newReportModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>דיווח חדש</h2>
+            <label>קטגוריה</label>
+            <input id="nrType" placeholder="קטגוריה">
+
+            <label>פריט</label>
+            <input id="nrItem" placeholder="פריט">
+
+            <label>תיאור</label>
+            <textarea id="nrDesc" placeholder="תיאור"></textarea>
+
+            <label>דחיפות</label>
+            <select id="nrUrgency">
+                <option value="גבוהה">גבוהה</option>
+                <option value="בינונית">בינונית</option>
+                <option value="נמוכה">נמוכה</option>
+            </select>
+
+            <label>קישור תמונה</label>
+            <input id="nrImageUrl" placeholder="https://">
+
+            <button id="saveReport">שמור</button>
+            <button id="closeModal">סגור</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
