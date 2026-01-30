@@ -1,152 +1,208 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>דשבורד</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="./style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>House Report - דיווח</title>
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
-<nav class="container py-3 d-flex gap-3">
-  <a href="./index.html">דף הבית</a>
-  <a href="./all_reports.html">כל התקלות</a>
-</nav>
 
-<div class="container">
-  <h3 class="mb-1" id="title"></h3>
-  <div class="small-muted mb-3">דיווח תקלה חדשה + צפייה בתקלות של המתקן</div>
+<header>
+  <h1 id="title">דיווח</h1>
+  <nav>
+    <a href="all_reports.html">כל הדיווחים</a>
+    <a href="index.html">דף הבית</a>
+  </nav>
+</header>
 
-  <div class="card mb-3">
-    <div class="card-body">
-      <div class="row g-2">
-        <div class="col-12 col-md-4">
-          <label class="form-label">אזור</label>
-          <input class="form-control" id="area" placeholder="לדוגמה: סלון / מטבח">
-        </div>
-        <div class="col-12 col-md-4">
-          <label class="form-label">סוג</label>
-          <select class="form-select" id="type">
-            <option>תקלה</option>
-            <option>חוסר</option>
-            <option>ניקיון</option>
-            <option>אחר</option>
-          </select>
-        </div>
-        <div class="col-12 col-md-4">
-          <label class="form-label">דחיפות</label>
-          <select class="form-select" id="urgency">
-            <option>רגיל</option>
-            <option>דחוף</option>
-            <option>מיידי</option>
-          </select>
-        </div>
-        <div class="col-12 col-md-4">
-          <label class="form-label">פריט</label>
-          <input class="form-control" id="item" placeholder="לדוגמה: מזגן / נורה">
-        </div>
-        <div class="col-12 col-md-8">
-          <label class="form-label">תיאור</label>
-          <input class="form-control" id="desc" placeholder="מה קרה / מה חסר">
-        </div>
+<main>
+
+  <div class="panel">
+    <div class="grid-3">
+      <div>
+        <label>אזור</label>
+        <select id="area">
+          <option value="">בחר...</option>
+          <option>סלון</option>
+          <option>מטבח</option>
+          <option>חדר שינה</option>
+          <option>מקלחת</option>
+          <option>מסדרון</option>
+          <option>חוץ</option>
+        </select>
       </div>
 
-      <div class="mt-3 d-flex gap-2">
-        <button class="btn btn-primary" id="btnSend">שלח דיווח</button>
-        <div class="small-muted" id="msg"></div>
+      <div>
+        <label>סוג</label>
+        <select id="type">
+          <option value="">בחר...</option>
+          <option>חוסר</option>
+          <option>תקלה</option>
+          <option>נזק</option>
+          <option>אחר</option>
+        </select>
       </div>
+
+      <div>
+        <label>דחיפות</label>
+        <select id="urgency">
+          <option value="">בחר...</option>
+          <option>נמוך</option>
+          <option>בינוני</option>
+          <option>גבוה</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="grid-2">
+      <div>
+        <label>פריט</label>
+        <input id="item" placeholder="לדוגמה: נגרר הווילון / ידית / ברז..." />
+      </div>
+      <div>
+        <label>קישור לתמונה (אופציונלי)</label>
+        <input id="imageUrl" placeholder="https://..." />
+      </div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div>
+      <label>תיאור</label>
+      <textarea id="desc" placeholder="מה הבעיה? מה חסר? איפה בדיוק?"></textarea>
+    </div>
+
+    <div class="actions">
+      <button id="btnSend">שלח דיווח</button>
+      <span id="statusMsg" class="small-muted"></span>
     </div>
   </div>
 
-  <div class="d-flex align-items-center justify-content-between mb-2">
-    <h5 class="m-0">תקלות במתקן</h5>
-    <button class="btn btn-outline-secondary btn-sm" id="btnRefresh">רענן</button>
+  <div class="panel">
+    <h3 style="margin:0 0 10px 0">תקלות במתקן</h3>
+    <div id="list" class="small-muted">טוען...</div>
   </div>
 
-  <div id="list"></div>
-</div>
+</main>
 
-<script src="./app.js"></script>
+<script src="app.js"></script>
 <script>
-  const site = qs("site") || "";
-  document.getElementById("title").textContent = `מתקן: ${site}`;
-  const listDiv = document.getElementById("list");
-  const msg = document.getElementById("msg");
+  const site = qs('site') || '';
+  const title = document.getElementById('title');
+  title.textContent = 'מתקן: ' + (site || 'לא נבחר');
+
+  const area = document.getElementById('area');
+  const type = document.getElementById('type');
+  const urgency = document.getElementById('urgency');
+  const item = document.getElementById('item');
+  const desc = document.getElementById('desc');
+  const imageUrl = document.getElementById('imageUrl');
+
+  const btnSend = document.getElementById('btnSend');
+  const statusMsg = document.getElementById('statusMsg');
+  const list = document.getElementById('list');
+
+  function escapeHtml(s){
+    return String(s||'')
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'","&#039;");
+  }
 
   function badge(status){
-    const map = {
-      "פתוחה":"bg-danger",
-      "בטיפול":"bg-warning text-dark",
-      "טופלה":"bg-success"
-    };
-    return map[status] || "bg-secondary";
+    const st = String(status||'חדש').trim() || 'חדש';
+    let cls = 'danger';
+    if(st==='טופל') cls='ok';
+    else if(st==='בטיפול') cls='warn';
+    return `<span class="badge ${cls}">${escapeHtml(st)}</span>`;
   }
 
-  async function load(){
-    listDiv.innerHTML = `<div class="small-muted">טוען...</div>`;
+  async function refresh(){
+    list.textContent = 'טוען...';
     const res = await apiGetList(site);
-    if(!res.ok){ listDiv.innerHTML = `<div class="alert alert-warning">${res.error||"שגיאה"}</div>`; return; }
+    if(!res || res.ok !== true){
+      list.textContent = 'שגיאה בטעינה';
+      return;
+    }
+    const rows = (res.data || []).sort((a,b)=>Number(b.id||0)-Number(a.id||0));
+    if(rows.length === 0){
+      list.textContent = 'אין דיווחים עדיין';
+      return;
+    }
 
-    const rows = (res.data||[]).slice().reverse();
-    if(!rows.length){ listDiv.innerHTML = `<div class="small-muted">אין דיווחים עדיין.</div>`; return; }
+    let html = `<table class="table">
+      <thead><tr>
+        <th>זמן</th><th>אזור</th><th>סוג</th><th>תיאור</th><th>דחיפות</th><th>סטטוס</th>
+      </tr></thead><tbody>`;
 
-    listDiv.innerHTML = "";
-    rows.forEach(r=>{
-      const status = String(r.status||"פתוחה");
-      const card = el(`
-        <div class="card mb-2">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-              <div>
-                <div class="fw-bold">${r.type||""} • ${r.item||""}</div>
-                <div class="small-muted">${r.area||""} • ${fmt(r.timestamp)}</div>
-                <div class="mt-1">${r.desc||""}</div>
-              </div>
-              <span class="badge badge-status ${badge(status)}">${status}</span>
-            </div>
-            <div class="mt-2 d-flex gap-2">
-              <button class="btn btn-sm btn-outline-warning" data-s="בטיפול">בטיפול</button>
-              <button class="btn btn-sm btn-outline-success" data-s="טופלה">טופלה</button>
-              <button class="btn btn-sm btn-outline-danger" data-s="פתוחה">פתוחה</button>
-            </div>
-          </div>
-        </div>
-      `);
-      card.querySelectorAll("button[data-s]").forEach(b=>{
-        b.onclick = async ()=>{
-          const next = b.getAttribute("data-s");
-          const ans = await apiSetStatus(String(r.id||""), next);
-          if(!ans.ok){ alert(ans.error||"שגיאה"); return; }
-          await load();
-        };
-      });
-      listDiv.appendChild(card);
-    });
+    for(const r of rows){
+      const t = (()=>{ try{ const d=new Date(r.timestamp); return !isNaN(d)? d.toLocaleString('he-IL'): (r.timestamp||''); }catch(e){ return r.timestamp||''; }})();
+      html += `<tr>
+        <td>${escapeHtml(t)}</td>
+        <td>${escapeHtml(r.area)}</td>
+        <td>${escapeHtml(r.type)}</td>
+        <td>${escapeHtml(r.desc)}</td>
+        <td>${escapeHtml(r.urgency)}</td>
+        <td>${badge(r.status)}</td>
+      </tr>`;
+    }
+    html += `</tbody></table>`;
+    list.innerHTML = html;
   }
 
-  document.getElementById("btnRefresh").onclick = load;
+  btnSend.onclick = async ()=>{
+    if(!site){ alert('חסר site בכתובת'); return; }
 
-  document.getElementById("btnSend").onclick = async ()=>{
-    msg.textContent = "שולח...";
-    const payload = {
-      site,
-      area: document.getElementById("area").value.trim(),
-      type: document.getElementById("type").value,
-      item: document.getElementById("item").value.trim(),
-      desc: document.getElementById("desc").value.trim(),
-      urgency: document.getElementById("urgency").value,
-      status: "פתוחה",
-      imageUrl: ""
-    };
-    const res = await apiCreate(payload);
-    if(!res.ok){ msg.textContent = res.error||"שגיאה"; return; }
-    msg.textContent = "נשלח ✅";
-    ["area","item","desc"].forEach(id=>document.getElementById(id).value="");
-    await load();
-    setTimeout(()=>msg.textContent="",1500);
+    // בדיקות בסיס
+    if(!area.value || !type.value || !urgency.value || !desc.value.trim()){
+      alert('חובה לבחור אזור, סוג, דחיפות ולמלא תיאור');
+      return;
+    }
+
+    btnSend.disabled = true;
+    statusMsg.textContent = 'שולח...';
+
+    try{
+      const payload = {
+        site,
+        area: area.value,
+        type: type.value,
+        item: item.value || '',
+        desc: desc.value.trim(),
+        urgency: urgency.value,
+        status: 'חדש',
+        imageUrl: imageUrl.value || ''
+      };
+
+      const out = await apiCreate(payload);
+      if(out && out.ok === true){
+        statusMsg.textContent = 'נשלח ✅';
+        // ניקוי
+        item.value = '';
+        desc.value = '';
+        imageUrl.value = '';
+        area.value = '';
+        type.value = '';
+        urgency.value = '';
+        await refresh();
+      }else{
+        statusMsg.textContent = 'שליחה נכשלה';
+        alert('שליחה נכשלה: ' + JSON.stringify(out));
+      }
+    }catch(e){
+      statusMsg.textContent = 'שגיאה בשליחה';
+      alert('שגיאה: ' + e.message);
+    }
+
+    btnSend.disabled = false;
   };
 
-  load();
+  refresh();
 </script>
 </body>
 </html>
