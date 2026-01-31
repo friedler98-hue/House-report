@@ -2,207 +2,77 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>House Report - דיווח</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>House Report - דירה</title>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
-<body>
+<body data-page="site">
+  <header>
+    <h1 id="siteTitle">מתקן:</h1>
+    <nav>
+      <a href="all_reports.html" id="allReportsLink">כל הדיווחים</a>
+      <a href="index.html">דף הבית</a>
+    </nav>
+  </header>
 
-<header>
-  <h1 id="title">דיווח</h1>
-  <nav>
-    <a href="all_reports.html">כל הדיווחים</a>
-    <a href="index.html">דף הבית</a>
-  </nav>
-</header>
+  <main class="container">
+    <section class="card">
+      <div class="form-grid">
+        <div>
+          <label>אזור</label>
+          <select id="area"></select>
+        </div>
 
-<main>
+        <div>
+          <label>סוג</label>
+          <select id="type"></select>
+        </div>
 
-  <div class="panel">
-    <div class="grid-3">
-      <div>
-        <label>אזור</label>
-        <select id="area">
-          <option value="">בחר...</option>
-          <option>סלון</option>
-          <option>מטבח</option>
-          <option>חדר שינה</option>
-          <option>מקלחת</option>
-          <option>מסדרון</option>
-          <option>חוץ</option>
-        </select>
+        <div>
+          <label>דחיפות</label>
+          <select id="urgency"></select>
+        </div>
+
+        <div>
+          <label>פריט</label>
+          <input id="item" placeholder="לדוגמה: נגרר הוילון / דלת / ברז..." />
+        </div>
+
+        <div>
+          <label>קישור לתמונה (אופציונלי)</label>
+          <input id="imageUrl" placeholder="https://..." />
+        </div>
+
+        <div style="grid-column: 1 / -1;">
+          <label>תיאור</label>
+          <textarea id="desc" rows="4" placeholder="מה הבעיה? מה חסר? איפה בדיוק?"></textarea>
+        </div>
       </div>
 
-      <div>
-        <label>סוג</label>
-        <select id="type">
-          <option value="">בחר...</option>
-          <option>חוסר</option>
-          <option>תקלה</option>
-          <option>נזק</option>
-          <option>אחר</option>
-        </select>
+      <div class="actions">
+        <span id="statusMsg" class="muted"></span>
+        <button id="submitBtn" class="primary">שלח דיווח</button>
       </div>
+    </section>
 
-      <div>
-        <label>דחיפות</label>
-        <select id="urgency">
-          <option value="">בחר...</option>
-          <option>נמוך</option>
-          <option>בינוני</option>
-          <option>גבוה</option>
-        </select>
-      </div>
-    </div>
+    <section class="card">
+      <h2>תקלות במתקן</h2>
+      <table id="siteTable">
+        <thead>
+          <tr>
+            <th>אזור</th>
+            <th>סוג</th>
+            <th>תיאור</th>
+            <th>דחיפות</th>
+            <th>סטטוס</th>
+            <th>זמן</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
 
-    <div style="height:12px"></div>
-
-    <div class="grid-2">
-      <div>
-        <label>פריט</label>
-        <input id="item" placeholder="לדוגמה: נגרר הווילון / ידית / ברז..." />
-      </div>
-      <div>
-        <label>קישור לתמונה (אופציונלי)</label>
-        <input id="imageUrl" placeholder="https://..." />
-      </div>
-    </div>
-
-    <div style="height:12px"></div>
-
-    <div>
-      <label>תיאור</label>
-      <textarea id="desc" placeholder="מה הבעיה? מה חסר? איפה בדיוק?"></textarea>
-    </div>
-
-    <div class="actions">
-      <button id="btnSend">שלח דיווח</button>
-      <span id="statusMsg" class="small-muted"></span>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h3 style="margin:0 0 10px 0">תקלות במתקן</h3>
-    <div id="list" class="small-muted">טוען...</div>
-  </div>
-
-</main>
-
-<script src="app.js"></script>
-<script>
-  const site = qs('site') || '';
-  const title = document.getElementById('title');
-  title.textContent = 'מתקן: ' + (site || 'לא נבחר');
-
-  const area = document.getElementById('area');
-  const type = document.getElementById('type');
-  const urgency = document.getElementById('urgency');
-  const item = document.getElementById('item');
-  const desc = document.getElementById('desc');
-  const imageUrl = document.getElementById('imageUrl');
-
-  const btnSend = document.getElementById('btnSend');
-  const statusMsg = document.getElementById('statusMsg');
-  const list = document.getElementById('list');
-
-  function escapeHtml(s){
-    return String(s||'')
-      .replaceAll('&','&amp;')
-      .replaceAll('<','&lt;')
-      .replaceAll('>','&gt;')
-      .replaceAll('"','&quot;')
-      .replaceAll("'","&#039;");
-  }
-
-  function badge(status){
-    const st = String(status||'חדש').trim() || 'חדש';
-    let cls = 'danger';
-    if(st==='טופל') cls='ok';
-    else if(st==='בטיפול') cls='warn';
-    return `<span class="badge ${cls}">${escapeHtml(st)}</span>`;
-  }
-
-  async function refresh(){
-    list.textContent = 'טוען...';
-    const res = await apiGetList(site);
-    if(!res || res.ok !== true){
-      list.textContent = 'שגיאה בטעינה';
-      return;
-    }
-    const rows = (res.data || []).sort((a,b)=>Number(b.id||0)-Number(a.id||0));
-    if(rows.length === 0){
-      list.textContent = 'אין דיווחים עדיין';
-      return;
-    }
-
-    let html = `<table class="table">
-      <thead><tr>
-        <th>זמן</th><th>אזור</th><th>סוג</th><th>תיאור</th><th>דחיפות</th><th>סטטוס</th>
-      </tr></thead><tbody>`;
-
-    for(const r of rows){
-      const t = (()=>{ try{ const d=new Date(r.timestamp); return !isNaN(d)? d.toLocaleString('he-IL'): (r.timestamp||''); }catch(e){ return r.timestamp||''; }})();
-      html += `<tr>
-        <td>${escapeHtml(t)}</td>
-        <td>${escapeHtml(r.area)}</td>
-        <td>${escapeHtml(r.type)}</td>
-        <td>${escapeHtml(r.desc)}</td>
-        <td>${escapeHtml(r.urgency)}</td>
-        <td>${badge(r.status)}</td>
-      </tr>`;
-    }
-    html += `</tbody></table>`;
-    list.innerHTML = html;
-  }
-
-  btnSend.onclick = async ()=>{
-    if(!site){ alert('חסר site בכתובת'); return; }
-
-    // בדיקות בסיס
-    if(!area.value || !type.value || !urgency.value || !desc.value.trim()){
-      alert('חובה לבחור אזור, סוג, דחיפות ולמלא תיאור');
-      return;
-    }
-
-    btnSend.disabled = true;
-    statusMsg.textContent = 'שולח...';
-
-    try{
-      const payload = {
-        site,
-        area: area.value,
-        type: type.value,
-        item: item.value || '',
-        desc: desc.value.trim(),
-        urgency: urgency.value,
-        status: 'חדש',
-        imageUrl: imageUrl.value || ''
-      };
-
-      const out = await apiCreate(payload);
-      if(out && out.ok === true){
-        statusMsg.textContent = 'נשלח ✅';
-        // ניקוי
-        item.value = '';
-        desc.value = '';
-        imageUrl.value = '';
-        area.value = '';
-        type.value = '';
-        urgency.value = '';
-        await refresh();
-      }else{
-        statusMsg.textContent = 'שליחה נכשלה';
-        alert('שליחה נכשלה: ' + JSON.stringify(out));
-      }
-    }catch(e){
-      statusMsg.textContent = 'שגיאה בשליחה';
-      alert('שגיאה: ' + e.message);
-    }
-
-    btnSend.disabled = false;
-  };
-
-  refresh();
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
