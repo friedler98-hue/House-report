@@ -4,9 +4,6 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxdJAq5l6Hym-50CBfBFVXgjgXm9gWe6mtqVXijE0nlnlt7hvIIXBgYoUfP25eVdjtY2A/exec";
 const REPORTS_PASSWORD = "1234"; // סיסמה ל"כל הדיווחים"
 
-// ⬇️ אם "שמור" עושה עדכון נכשל -> תשנה את זה ל: "update"
-const UPDATE_ACTION = "updatestatus";
-
 // רשימת הדירות שמופיעות במסך הבית
 const SITES = [
   "דירת 50",
@@ -28,28 +25,13 @@ function qs(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
-// מאחד כל צורת כתיבה ל: "דירת X"
-function normalizeSite(input) {
-  if (!input) return "";
-  const s = String(input).trim();
-
-  // "דירת 55"
-  let m = s.match(/^דירת\s*(\d+)$/);
-  if (m) return `דירת ${m[1]}`;
-
-  // "דירה 55"
-  m = s.match(/^דירה\s*(\d+)$/);
-  if (m) return `דירת ${m[1]}`;
-
-  // "55 דירה"
-  m = s.match(/^(\d+)\s*דירה$/);
-  if (m) return `דירת ${m[1]}`;
-
-  // "55"
-  m = s.match(/^(\d+)$/);
-  if (m) return `דירת ${m[1]}`;
-
-  return s;
+// מנרמל כל וריאציה של שם דירה לפורמט אחיד: "דירת <מספר>"
+function normalizeSite(raw) {
+  const s = (raw || "").toString().trim();
+  if (!s) return "";
+  const m = s.match(/\d+/);
+  if (!m) return s; // אם אין מספר - נחזיר כמו שזה
+  return `דירת ${m[0]}`;
 }
 
 function setAuth(ok) {
@@ -92,7 +74,10 @@ async function apiCall(action, payload = {}) {
     const r1 = await fetch(u.toString(), { method: "GET" });
     const j1 = await safeJson(r1);
     if (j1 && j1.ok) return j1;
-  } catch (e) {}
+    // אם ok:false ננסה POST
+  } catch (e) {
+    // ממשיכים ל-POST
+  }
 
   // ניסיון 2: POST JSON
   const r2 = await fetch(API_URL, {
@@ -112,19 +97,17 @@ async function apiPing() {
 
 async function apiGetList(site = "") {
   // אם site ריק → כל הדיווחים
-  const fixedSite = site ? normalizeSite(site) : "";
-  return await apiCall("list", { site: fixedSite });
+  return await apiCall("list", { site });
 }
 
 async function apiCreate(payload) {
-  // יצירת דיווח - תמיד נשמור שם דירה אחיד
-  const fixed = { ...payload, site: normalizeSite(payload.site) };
-  return await apiCall("createreport", fixed);
+  // יצירת דיווח
+  return await apiCall("createreport", payload);
 }
 
 async function apiUpdateStatus(id, status) {
-  // עדכון סטטוס - action נשלט ע"י UPDATE_ACTION למעלה
-  return await apiCall(UPDATE_ACTION, { id, status });
+  // עדכון סטטוס
+  return await apiCall("updatestatus", { id, status });
 }
 
 // =====================================
@@ -198,18 +181,40 @@ function renderSiteTable(rows) {
       <td>${r.desc || ""}</td>
       <td>${r.urgency || ""}</td>
       <td><span class="badge-status">${r.status || ""}</span></td>
-      <td>${r.timestamp || ""}</td>
+      <td>${formatTs(r.timestamp)}</td>
     `;
     tbody.appendChild(tr);
   }
 }
 
+// מסדר timestamps אם מגיעים ב-ISO או טקסט
+function formatTs(ts) {
+  if (!ts) return "";
+  const s = ts.toString();
+  // אם זה ISO (כולל T) ננסה להפוך לקריא
+  if (s.includes("T")) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}, ${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+    }
+  }
+  return s;
+}
+
+/**
+ * ✅ התיקון המרכזי:
+ * לא מבקשים מה-Apps Script לסנן לפי site,
+ * אלא מביאים את כל הדיווחים ומסננים פה לפי נרמול.
+ */
 async function loadSiteReports(siteName) {
   const fixedSite = normalizeSite(siteName);
-  const res = await apiGetList(fixedSite);
+
+  const res = await apiGetList(""); // כל הדיווחים
   if (!res.ok) throw new Error(res.error || "Failed to load");
+
   const rows = res.rows || res.data || [];
-  return rows;
+  return rows.filter(r => normalizeSite(r.site || "") === fixedSite);
 }
 
 async function initSitePage() {
@@ -245,7 +250,7 @@ async function initSitePage() {
         if (statusMsg) statusMsg.textContent = "שולח...";
 
         const payload = {
-          site: siteName,
+          site: siteName, // נשמור תמיד בפורמט מנורמל
           area: areaSel?.value || "",
           type: typeSel?.value || "",
           item: itemInp?.value || "",
@@ -304,7 +309,7 @@ function renderAllReportsTable(rows) {
     `;
 
     tr.innerHTML = `
-      <td>${r.timestamp || ""}</td>
+      <td>${formatTs(r.timestamp)}</td>
       <td>${normalizeSite(r.site || "")}</td>
       <td>${r.area || ""}</td>
       <td>${r.type || ""}</td>
@@ -316,7 +321,6 @@ function renderAllReportsTable(rows) {
     tbody.appendChild(tr);
   }
 
-  // מאזינים לכפתורי שמירה
   document.querySelectorAll(".saveBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
@@ -331,7 +335,7 @@ function renderAllReportsTable(rows) {
         btn.textContent = "נשמר";
         setTimeout(() => (btn.textContent = "שמור"), 800);
       } catch (e) {
-        alert(`עדכון נכשל: ${e.message}`);
+        alert(`שגיאה: ${e.message}`);
         btn.textContent = "שמור";
       } finally {
         btn.disabled = false;
@@ -341,6 +345,7 @@ function renderAllReportsTable(rows) {
 }
 
 async function initAllReportsPage() {
+  // סיסמה
   if (!isAuthed()) {
     const ok = promptPasswordOrFail();
     if (!ok) {
@@ -354,7 +359,7 @@ async function initAllReportsPage() {
   const runBtn = document.getElementById("runFilter");
 
   if (filterSite) {
-    fillSelectOptions(filterSite, ["הכל", ...SITES]);
+    fillSelectOptions(filterSite, ["הכל", ...SITES.map(normalizeSite)]);
     filterSite.value = "הכל";
   }
   if (filterStatus) {
@@ -367,14 +372,13 @@ async function initAllReportsPage() {
     if (!res.ok) throw new Error(res.error || "Failed to load all");
     let rows = res.rows || res.data || [];
 
+    // מנרמלים כדי שסינונים יעבדו תמיד
+    rows = rows.map(r => ({ ...r, site: normalizeSite(r.site || "") }));
+
     const siteVal = filterSite?.value || "הכל";
     const statusVal = filterStatus?.value || "הכל";
 
-    // נרמול לפני סינון - זה החלק שמונע "העלמות"
-    if (siteVal !== "הכל") {
-      const fixedSiteVal = normalizeSite(siteVal);
-      rows = rows.filter(r => normalizeSite(r.site || "") === fixedSiteVal);
-    }
+    if (siteVal !== "הכל") rows = rows.filter(r => (r.site || "") === siteVal);
     if (statusVal !== "הכל") rows = rows.filter(r => (r.status || "") === statusVal);
 
     renderAllReportsTable(rows);
