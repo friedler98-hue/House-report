@@ -4,6 +4,9 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxdJAq5l6Hym-50CBfBFVXgjgXm9gWe6mtqVXijE0nlnlt7hvIIXBgYoUfP25eVdjtY2A/exec";
 const REPORTS_PASSWORD = "1234"; // סיסמה ל"כל הדיווחים"
 
+// ⬇️ אם "שמור" עושה עדכון נכשל -> תשנה את זה ל: "update"
+const UPDATE_ACTION = "updatestatus";
+
 // רשימת הדירות שמופיעות במסך הבית
 const SITES = [
   "דירת 50",
@@ -23,6 +26,30 @@ const SITES = [
 // =====================================
 function qs(name) {
   return new URLSearchParams(location.search).get(name);
+}
+
+// מאחד כל צורת כתיבה ל: "דירת X"
+function normalizeSite(input) {
+  if (!input) return "";
+  const s = String(input).trim();
+
+  // "דירת 55"
+  let m = s.match(/^דירת\s*(\d+)$/);
+  if (m) return `דירת ${m[1]}`;
+
+  // "דירה 55"
+  m = s.match(/^דירה\s*(\d+)$/);
+  if (m) return `דירת ${m[1]}`;
+
+  // "55 דירה"
+  m = s.match(/^(\d+)\s*דירה$/);
+  if (m) return `דירת ${m[1]}`;
+
+  // "55"
+  m = s.match(/^(\d+)$/);
+  if (m) return `דירת ${m[1]}`;
+
+  return s;
 }
 
 function setAuth(ok) {
@@ -53,7 +80,6 @@ async function safeJson(res) {
 
 /**
  * פונקציה אחידה שמנסה לדבר עם ה-API גם ב-GET וגם ב-POST
- * כי לפעמים ה-Apps Script מוגדר אחרת.
  */
 async function apiCall(action, payload = {}) {
   // ניסיון 1: GET ?action=...
@@ -66,10 +92,7 @@ async function apiCall(action, payload = {}) {
     const r1 = await fetch(u.toString(), { method: "GET" });
     const j1 = await safeJson(r1);
     if (j1 && j1.ok) return j1;
-    // אם קיבלנו Unknown action / או ok:false – ננסה POST
-  } catch (e) {
-    // ממשיכים ל-POST
-  }
+  } catch (e) {}
 
   // ניסיון 2: POST JSON
   const r2 = await fetch(API_URL, {
@@ -89,18 +112,19 @@ async function apiPing() {
 
 async function apiGetList(site = "") {
   // אם site ריק → כל הדיווחים
-  return await apiCall("list", { site });
+  const fixedSite = site ? normalizeSite(site) : "";
+  return await apiCall("list", { site: fixedSite });
 }
 
 async function apiCreate(payload) {
-  // יצירת דיווח
-  return await apiCall("createreport", payload);
+  // יצירת דיווח - תמיד נשמור שם דירה אחיד
+  const fixed = { ...payload, site: normalizeSite(payload.site) };
+  return await apiCall("createreport", fixed);
 }
 
 async function apiUpdateStatus(id, status) {
-  // עדכון סטטוס
-  // (אם אצלך בסקריפט זה נקרא אחרת, זו הנקודה היחידה לשנות: "updatestatus")
-  return await apiCall("updatestatus", { id, status });
+  // עדכון סטטוס - action נשלט ע"י UPDATE_ACTION למעלה
+  return await apiCall(UPDATE_ACTION, { id, status });
 }
 
 // =====================================
@@ -127,7 +151,6 @@ function initIndexPage() {
   const allReportsLink = document.getElementById("allReportsLink");
   if (allReportsLink) {
     allReportsLink.addEventListener("click", (e) => {
-      // יבקש סיסמה לפני מעבר
       if (!isAuthed()) {
         const ok = promptPasswordOrFail();
         if (!ok) e.preventDefault();
@@ -182,13 +205,17 @@ function renderSiteTable(rows) {
 }
 
 async function loadSiteReports(siteName) {
-  const res = await apiGetList(siteName);
+  const fixedSite = normalizeSite(siteName);
+  const res = await apiGetList(fixedSite);
   if (!res.ok) throw new Error(res.error || "Failed to load");
-  return res.rows || res.data || []; // תומך בשמות שונים של שדות
+  const rows = res.rows || res.data || [];
+  return rows;
 }
 
 async function initSitePage() {
-  const siteName = qs("site") || "";
+  const rawSiteName = qs("site") || "";
+  const siteName = normalizeSite(rawSiteName);
+
   const title = document.getElementById("siteTitle");
   if (title) title.textContent = `מתקן: ${siteName}`;
 
@@ -278,7 +305,7 @@ function renderAllReportsTable(rows) {
 
     tr.innerHTML = `
       <td>${r.timestamp || ""}</td>
-      <td>${r.site || ""}</td>
+      <td>${normalizeSite(r.site || "")}</td>
       <td>${r.area || ""}</td>
       <td>${r.type || ""}</td>
       <td>${r.desc || ""}</td>
@@ -314,7 +341,6 @@ function renderAllReportsTable(rows) {
 }
 
 async function initAllReportsPage() {
-  // סיסמה: אם לא מאומת → נחזיר לדף הבית
   if (!isAuthed()) {
     const ok = promptPasswordOrFail();
     if (!ok) {
@@ -344,7 +370,11 @@ async function initAllReportsPage() {
     const siteVal = filterSite?.value || "הכל";
     const statusVal = filterStatus?.value || "הכל";
 
-    if (siteVal !== "הכל") rows = rows.filter(r => (r.site || "") === siteVal);
+    // נרמול לפני סינון - זה החלק שמונע "העלמות"
+    if (siteVal !== "הכל") {
+      const fixedSiteVal = normalizeSite(siteVal);
+      rows = rows.filter(r => normalizeSite(r.site || "") === fixedSiteVal);
+    }
     if (statusVal !== "הכל") rows = rows.filter(r => (r.status || "") === statusVal);
 
     renderAllReportsTable(rows);
