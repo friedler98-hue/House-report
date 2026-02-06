@@ -152,6 +152,10 @@ button.secondary{
 }
 button.secondary:hover{ background:#0b1220; }
 
+/* תוספת כדי שתוכל להשתמש בכפתור "danger" בלי לפגוע בקיים */
+button.danger{ background:var(--danger); }
+button.danger:hover{ filter:brightness(.95); }
+
 .badge{
   display:inline-block;
   padding:4px 10px;
@@ -188,6 +192,48 @@ button.secondary:hover{ background:#0b1220; }
 .table tr:last-child td{ border-bottom:0; }
 
 .small-muted{ color:var(--muted); font-size:.92rem; }
+
+/* =========================
+   ✅ תוספות לתמונות (חדש)
+   ========================= */
+.img-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+.img-preview-wrap{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:#fff;
+}
+.img-preview{
+  width:84px;
+  height:84px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  object-fit:cover;
+}
+.img-status{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.muted{ color:var(--muted); }
+
+/* כפתור צפייה קטן */
+.viewImgBtn{
+  background:#111827;
+  border-radius:10px;
+  padding:8px 10px;
+  font-weight:800;
+  color:#fff;
+}
+.viewImgBtn:hover{ background:#0b1220; }
 
 @media (max-width: 900px){
   .sites-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
