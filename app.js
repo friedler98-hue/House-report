@@ -30,7 +30,7 @@ function normalizeSite(raw) {
   const s = (raw || "").toString().trim();
   if (!s) return "";
   const m = s.match(/\d+/);
-  if (!m) return s; // אם אין מספר - נחזיר כמו שזה
+  if (!m) return s;
   return `דירת ${m[0]}`;
 }
 
@@ -74,10 +74,7 @@ async function apiCall(action, payload = {}) {
     const r1 = await fetch(u.toString(), { method: "GET" });
     const j1 = await safeJson(r1);
     if (j1 && j1.ok) return j1;
-    // אם ok:false ננסה POST
-  } catch (e) {
-    // ממשיכים ל-POST
-  }
+  } catch (e) {}
 
   // ניסיון 2: POST JSON
   const r2 = await fetch(API_URL, {
@@ -91,23 +88,97 @@ async function apiCall(action, payload = {}) {
 // =====================================
 // API wrappers
 // =====================================
-async function apiPing() {
-  return await apiCall("ping", {});
-}
-
 async function apiGetList(site = "") {
-  // אם site ריק → כל הדיווחים
   return await apiCall("list", { site });
 }
 
 async function apiCreate(payload) {
-  // יצירת דיווח
   return await apiCall("createreport", payload);
 }
 
 async function apiUpdateStatus(id, status) {
-  // עדכון סטטוס
   return await apiCall("updatestatus", { id, status });
+}
+
+// ✅ חדש: העלאת תמונה ל-Drive דרך Apps Script
+async function apiUploadImage({ base64, mimeType, fileName }) {
+  return await apiCall("uploadimage", { base64, mimeType, fileName });
+}
+
+// =====================================
+// Utils: time formatting
+// =====================================
+function formatTs(ts) {
+  if (!ts) return "";
+  const s = ts.toString();
+  if (s.includes("T")) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}, ${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+    }
+  }
+  return s;
+}
+
+function el(id) { return document.getElementById(id); }
+
+// =====================================
+// Image helpers (client)
+// =====================================
+
+// קורא קובץ לתוך base64 (בלי prefix)
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const res = String(fr.result || "");
+      // res נראה כך: data:image/jpeg;base64,AAAA
+      const comma = res.indexOf(",");
+      resolve(comma >= 0 ? res.slice(comma + 1) : res);
+    };
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+
+// מקטין תמונה לפני העלאה (כדי שלא יהיה כבד)
+async function resizeImageFile(file, maxSize = 1280, quality = 0.75) {
+  // אם זה לא תמונה - נחזיר כמו שזה
+  if (!file.type.startsWith("image/")) return file;
+
+  const img = document.createElement("img");
+  const url = URL.createObjectURL(file);
+
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = rej;
+    img.src = url;
+  });
+
+  let { width, height } = img;
+  const scale = Math.min(1, maxSize / Math.max(width, height));
+  const newW = Math.round(width * scale);
+  const newH = Math.round(height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = newW;
+  canvas.height = newH;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, newW, newH);
+
+  URL.revokeObjectURL(url);
+
+  const outMime = "image/jpeg"; // תמיד JPEG כדי להקטין
+  const dataUrl = canvas.toDataURL(outMime, quality);
+
+  // convert dataURL -> File
+  const b64 = dataUrl.split(",")[1];
+  const byteStr = atob(b64);
+  const arr = new Uint8Array(byteStr.length);
+  for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+
+  return new File([arr], (file.name || "photo") + ".jpg", { type: outMime });
 }
 
 // =====================================
@@ -145,8 +216,6 @@ function initIndexPage() {
 // =====================================
 // UI: Site page (דירה ספציפית)
 // =====================================
-function el(id) { return document.getElementById(id); }
-
 function fillSelectOptions(select, options) {
   select.innerHTML = "";
   const opt0 = document.createElement("option");
@@ -161,6 +230,11 @@ function fillSelectOptions(select, options) {
   }
 }
 
+function viewImage(url) {
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 function renderSiteTable(rows) {
   const tbody = document.querySelector("#siteTable tbody");
   if (!tbody) return;
@@ -168,44 +242,36 @@ function renderSiteTable(rows) {
 
   if (!rows || rows.length === 0) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="6" style="text-align:center;color:#6c757d;padding:14px;">אין דיווחים עדיין</td>`;
+    tr.innerHTML = `<td colspan="7" style="text-align:center;color:#6c757d;padding:14px;">אין דיווחים עדיין</td>`;
     tbody.appendChild(tr);
     return;
   }
 
   for (const r of rows) {
     const tr = document.createElement("tr");
+    const imgCell = r.imageUrl
+      ? `<button class="viewImgBtn" type="button" data-url="${r.imageUrl}">צפייה</button>`
+      : `<span class="muted">—</span>`;
+
     tr.innerHTML = `
       <td>${r.area || ""}</td>
       <td>${r.type || ""}</td>
       <td>${r.desc || ""}</td>
       <td>${r.urgency || ""}</td>
       <td><span class="badge-status">${r.status || ""}</span></td>
+      <td>${imgCell}</td>
       <td>${formatTs(r.timestamp)}</td>
     `;
     tbody.appendChild(tr);
   }
-}
 
-// מסדר timestamps אם מגיעים ב-ISO או טקסט
-function formatTs(ts) {
-  if (!ts) return "";
-  const s = ts.toString();
-  // אם זה ISO (כולל T) ננסה להפוך לקריא
-  if (s.includes("T")) {
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-      const pad = (n) => String(n).padStart(2, "0");
-      return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}, ${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
-    }
-  }
-  return s;
+  tbody.querySelectorAll(".viewImgBtn").forEach(btn => {
+    btn.addEventListener("click", () => viewImage(btn.getAttribute("data-url")));
+  });
 }
 
 /**
- * ✅ התיקון המרכזי:
- * לא מבקשים מה-Apps Script לסנן לפי site,
- * אלא מביאים את כל הדיווחים ומסננים פה לפי נרמול.
+ * מביאים את כל הדיווחים ומסננים פה לפי נרמול
  */
 async function loadSiteReports(siteName) {
   const fixedSite = normalizeSite(siteName);
@@ -230,13 +296,83 @@ async function initSitePage() {
   const urgencySel = el("urgency");
   const itemInp = el("item");
   const descInp = el("desc");
-  const imgInp = el("imageUrl");
+
+  // ✅ זה hidden שמחזיק את ה-URL אחרי העלאה
+  const imageUrlHidden = el("imageUrl");
+
   const btn = el("submitBtn");
   const statusMsg = el("statusMsg");
 
   if (areaSel) fillSelectOptions(areaSel, ["מטבח", "סלון", "חדר שינה", "שירותים", "מקלחת", "מרפסת", "אחר"]);
   if (typeSel) fillSelectOptions(typeSel, ["תקלה", "חוסר"]);
   if (urgencySel) fillSelectOptions(urgencySel, ["נמוך", "בינוני", "גבוה"]);
+
+  // ✅ Image UI elements
+  const btnTakePhoto = el("btnTakePhoto");
+  const btnChoosePhoto = el("btnChoosePhoto");
+  const btnRemovePhoto = el("btnRemovePhoto");
+  const fileCamera = el("fileCamera");
+  const fileGallery = el("fileGallery");
+  const previewWrap = document.querySelector(".img-preview-wrap");
+  const imgPreview = el("imgPreview");
+  const imgUploadStatus = el("imgUploadStatus");
+
+  function resetImageUI() {
+    if (imageUrlHidden) imageUrlHidden.value = "";
+    if (imgPreview) imgPreview.src = "";
+    if (previewWrap) previewWrap.style.display = "none";
+    if (btnRemovePhoto) btnRemovePhoto.style.display = "none";
+    if (imgUploadStatus) imgUploadStatus.textContent = "";
+    if (fileCamera) fileCamera.value = "";
+    if (fileGallery) fileGallery.value = "";
+  }
+
+  async function handlePickedFile(file) {
+    if (!file) return;
+
+    // תצוגה מקדימה מיד
+    if (previewWrap) previewWrap.style.display = "flex";
+    if (btnRemovePhoto) btnRemovePhoto.style.display = "inline-block";
+    if (imgUploadStatus) imgUploadStatus.textContent = "מעלה תמונה...";
+
+    const localUrl = URL.createObjectURL(file);
+    if (imgPreview) imgPreview.src = localUrl;
+
+    try {
+      // הקטנה לפני העלאה
+      const resized = await resizeImageFile(file);
+
+      const base64 = await fileToBase64(resized);
+      const mimeType = resized.type || "image/jpeg";
+      const fileName = resized.name || `photo_${Date.now()}.jpg`;
+
+      const res = await apiUploadImage({ base64, mimeType, fileName });
+      if (!res.ok) throw new Error(res.error || "העלאה נכשלה");
+
+      // נשמור את ה-URL כדי שייכנס לשיטס
+      if (imageUrlHidden) imageUrlHidden.value = res.url || "";
+
+      if (imgUploadStatus) imgUploadStatus.textContent = "✓ התמונה עלתה";
+    } catch (e) {
+      if (imgUploadStatus) imgUploadStatus.textContent = "";
+      alert("שגיאה בהעלאת תמונה: " + e.message);
+      resetImageUI();
+    } finally {
+      URL.revokeObjectURL(localUrl);
+    }
+  }
+
+  if (btnTakePhoto && fileCamera) {
+    btnTakePhoto.addEventListener("click", () => fileCamera.click());
+    fileCamera.addEventListener("change", () => handlePickedFile(fileCamera.files?.[0]));
+  }
+  if (btnChoosePhoto && fileGallery) {
+    btnChoosePhoto.addEventListener("click", () => fileGallery.click());
+    fileGallery.addEventListener("change", () => handlePickedFile(fileGallery.files?.[0]));
+  }
+  if (btnRemovePhoto) {
+    btnRemovePhoto.addEventListener("click", () => resetImageUI());
+  }
 
   async function refreshTable() {
     const rows = await loadSiteReports(siteName);
@@ -249,14 +385,19 @@ async function initSitePage() {
         btn.disabled = true;
         if (statusMsg) statusMsg.textContent = "שולח...";
 
+        // אם המשתמש בחר תמונה ועדיין כתוב "מעלה..." אז לא ניתן לשלוח
+        if (imgUploadStatus && imgUploadStatus.textContent.includes("מעלה")) {
+          throw new Error("התמונה עדיין עולה, חכה רגע ואז שלח שוב");
+        }
+
         const payload = {
-          site: siteName, // נשמור תמיד בפורמט מנורמל
+          site: siteName,
           area: areaSel?.value || "",
           type: typeSel?.value || "",
           item: itemInp?.value || "",
           desc: descInp?.value || "",
           urgency: urgencySel?.value || "",
-          imageUrl: imgInp?.value || "",
+          imageUrl: imageUrlHidden?.value || "",
         };
 
         const res = await apiCreate(payload);
@@ -268,7 +409,7 @@ async function initSitePage() {
         if (urgencySel) urgencySel.value = "";
         if (itemInp) itemInp.value = "";
         if (descInp) descInp.value = "";
-        if (imgInp) imgInp.value = "";
+        resetImageUI();
 
         if (statusMsg) statusMsg.textContent = "✓ נשלח";
         await refreshTable();
@@ -294,7 +435,7 @@ function renderAllReportsTable(rows) {
 
   if (!rows || rows.length === 0) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="8" style="text-align:center;color:#6c757d;padding:14px;">אין נתונים להצגה</td>`;
+    tr.innerHTML = `<td colspan="9" style="text-align:center;color:#6c757d;padding:14px;">אין נתונים להצגה</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -308,6 +449,10 @@ function renderAllReportsTable(rows) {
       </select>
     `;
 
+    const imgCell = r.imageUrl
+      ? `<button class="viewImgBtn" type="button" data-url="${r.imageUrl}">צפייה</button>`
+      : `<span class="muted">—</span>`;
+
     tr.innerHTML = `
       <td>${formatTs(r.timestamp)}</td>
       <td>${normalizeSite(r.site || "")}</td>
@@ -315,13 +460,18 @@ function renderAllReportsTable(rows) {
       <td>${r.type || ""}</td>
       <td>${r.desc || ""}</td>
       <td>${r.urgency || ""}</td>
+      <td>${imgCell}</td>
       <td>${statusSelect}</td>
       <td><button class="saveBtn" data-id="${r.id}">שמור</button></td>
     `;
     tbody.appendChild(tr);
   }
 
-  document.querySelectorAll(".saveBtn").forEach(btn => {
+  tbody.querySelectorAll(".viewImgBtn").forEach(btn => {
+    btn.addEventListener("click", () => viewImage(btn.getAttribute("data-url")));
+  });
+
+  tbody.querySelectorAll(".saveBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
       const sel = document.querySelector(`.statusSelect[data-id="${id}"]`);
@@ -345,7 +495,6 @@ function renderAllReportsTable(rows) {
 }
 
 async function initAllReportsPage() {
-  // סיסמה
   if (!isAuthed()) {
     const ok = promptPasswordOrFail();
     if (!ok) {
@@ -368,11 +517,10 @@ async function initAllReportsPage() {
   }
 
   async function refresh() {
-    const res = await apiGetList(""); // כל הדיווחים
+    const res = await apiGetList("");
     if (!res.ok) throw new Error(res.error || "Failed to load all");
     let rows = res.rows || res.data || [];
 
-    // מנרמלים כדי שסינונים יעבדו תמיד
     rows = rows.map(r => ({ ...r, site: normalizeSite(r.site || "") }));
 
     const siteVal = filterSite?.value || "הכל";
