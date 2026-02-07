@@ -6,16 +6,8 @@ const REPORTS_PASSWORD = "1234";
 
 // רשימת הדירות שמופיעות במסך הבית
 const SITES = [
-  "דירת 50",
-  "דירת 55",
-  "דירת 56",
-  "דירת 51",
-  "דירת 95",
-  "דירת 45",
-  "דירת 42",
-  "דירת 500",
-  "דירת 800",
-  "דירת 900",
+  "דירת 50", "דירת 55", "דירת 56", "דירת 51", "דירת 95",
+  "דירת 45", "דירת 42", "דירת 500", "דירת 800", "דירת 900",
 ];
 
 // =====================================
@@ -25,7 +17,6 @@ function qs(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
-// מנרמל כל וריאציה של שם דירה לפורמט אחיד: "דירת <מספר>"
 function normalizeSite(raw) {
   const s = (raw || "").toString().trim();
   if (!s) return "";
@@ -57,42 +48,24 @@ function promptPasswordOrFail() {
 
 async function safeJson(res) {
   const txt = await res.text();
-  try { return JSON.parse(txt); } catch { return { ok:false, error:"Bad JSON", raw: txt }; }
+  try { return JSON.parse(txt); } catch { return { ok: false, error: "Bad JSON", raw: txt }; }
 }
 
-/**
- * פונקציה אחידה שמנסה לדבר עם ה-API גם ב-GET וגם ב-POST
- */
 async function apiCall(action, payload = {}) {
-  // ניסיון 1: GET ?action=...
-  try {
-    const u = new URL(API_URL);
-    u.searchParams.set("action", action);
-    for (const [k, v] of Object.entries(payload)) {
-      if (v !== undefined && v !== null && v !== "") u.searchParams.set(k, v);
-    }
-    const r1 = await fetch(u.toString(), { method: "GET" });
-    const j1 = await safeJson(r1);
-    if (j1 && j1.ok) return j1;
-  } catch (e) {}
-
-  // ניסיון 2: POST JSON
-  const r2 = await fetch(API_URL, {
+  const body = JSON.stringify({ action, ...payload });
+  const response = await fetch(API_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action, ...payload }),
+    body: body,
   });
-  return await safeJson(r2);
+  return await safeJson(response);
 }
 
 // =====================================
 // API wrappers
 // =====================================
-async function apiPing() {
-  return await apiCall("ping", {});
-}
-
 async function apiGetList(site = "") {
+  // בגלל מגבלות CORS, נשתמש ב-POST גם לקבלת רשימה
   return await apiCall("list", { site });
 }
 
@@ -150,6 +123,7 @@ function initIndexPage() {
 function el(id) { return document.getElementById(id); }
 
 function fillSelectOptions(select, options) {
+  if (!select) return;
   select.innerHTML = "";
   const opt0 = document.createElement("option");
   opt0.value = "";
@@ -163,18 +137,12 @@ function fillSelectOptions(select, options) {
   }
 }
 
-// מסדר timestamps אם מגיעים ב-ISO או טקסט
 function formatTs(ts) {
   if (!ts) return "";
-  const s = ts.toString();
-  if (s.includes("T")) {
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-      const pad = (n) => String(n).padStart(2, "0");
-      return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}, ${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
-    }
-  }
-  return s;
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return ts;
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}, ${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
 function openImage(url) {
@@ -208,7 +176,7 @@ function renderSiteTable(rows) {
 
   for (const r of rows) {
     const tr = document.createElement("tr");
-    const hasImg = !!(r.imageUrl && String(r.imageUrl).trim());
+    const hasImg = !!(r.imageUrl && String(r.imageUrl).trim().startsWith("http"));
     tr.innerHTML = `
       <td>${r.area || ""}</td>
       <td>${r.type || ""}</td>
@@ -228,23 +196,9 @@ function renderSiteTable(rows) {
   });
 }
 
-/**
- * טוענים את כל הדיווחים ומסננים בצד לקוח לפי נרמול דירה
- */
-async function loadSiteReports(siteName) {
-  const fixedSite = normalizeSite(siteName);
-
-  const res = await apiGetList("");
-  if (!res.ok) throw new Error(res.error || "Failed to load");
-
-  const rows = res.rows || res.data || [];
-  return rows.filter(r => normalizeSite(r.site || "") === fixedSite);
-}
-
 async function initSitePage() {
   const rawSiteName = qs("site") || "";
   const siteName = normalizeSite(rawSiteName);
-
   const title = document.getElementById("siteTitle");
   if (title) title.textContent = `מתקן: ${siteName}`;
 
@@ -253,139 +207,103 @@ async function initSitePage() {
   const urgencySel = el("urgency");
   const itemInp = el("item");
   const descInp = el("desc");
-
-  // שדות תמונה חדשים
-  const imgHidden = el("imageUrl");        // input hidden
-  const imgPreview = el("imgPreview");     // img
-  const imgInfo = el("imgInfo");           // span
+  const imgHidden = el("imageUrl");
+  const imgPreview = el("imgPreview");
+  const imgInfo = el("imgInfo");
   const btnCamera = el("btnCamera");
   const btnGallery = el("btnGallery");
   const fileCamera = el("fileCamera");
   const fileGallery = el("fileGallery");
   const btnRemoveImg = el("btnRemoveImg");
-
   const btn = el("submitBtn");
   const statusMsg = el("statusMsg");
 
-  if (areaSel) fillSelectOptions(areaSel, ["מטבח", "סלון", "חדר שינה", "שירותים", "מקלחת", "מרפסת", "אחר"]);
-  if (typeSel) fillSelectOptions(typeSel, ["תקלה", "חוסר"]);
-  if (urgencySel) fillSelectOptions(urgencySel, ["נמוך", "בינוני", "גבוה"]);
+  fillSelectOptions(areaSel, ["מטבח", "סלון", "חדר שינה", "שירותים", "מקלחת", "מרפסת", "אחר"]);
+  fillSelectOptions(typeSel, ["תקלה", "חוסר"]);
+  fillSelectOptions(urgencySel, ["נמוך", "בינוני", "גבוה"]);
 
   async function refreshTable() {
-    const rows = await loadSiteReports(siteName);
-    renderSiteTable(rows);
+    try {
+      const res = await apiGetList(siteName);
+      if (res.ok) renderSiteTable(res.rows);
+    } catch (e) { console.error("Refresh table error:", e); }
   }
 
   async function handlePickedFile(file) {
     try {
       if (!file) return;
+      if (file.size / (1024 * 1024) > 4) { alert("קובץ גדול מדי (מקסימום 4MB)"); return; }
 
-      // הגבלת גודל כדי לא להפיל Apps Script (base64 מגדיל את זה)
-      const maxMb = 4;
-      const sizeMb = file.size / (1024 * 1024);
-      if (sizeMb > maxMb) {
-        alert(`הקובץ גדול מדי (${sizeMb.toFixed(1)}MB). מקסימום ${maxMb}MB.`);
-        return;
-      }
-
-      // תצוגה מקדימה
-      const localUrl = URL.createObjectURL(file);
       if (imgPreview) {
-        imgPreview.src = localUrl;
+        imgPreview.src = URL.createObjectURL(file);
         imgPreview.style.display = "block";
       }
-      if (imgInfo) imgInfo.textContent = "מעלה תמונה לשרת...";
+      if (imgInfo) imgInfo.textContent = "מעלה תמונה...";
 
       const base64 = await fileToBase64(file);
       const res = await apiUploadImage({
-        base64,
+        base64: base64,
         mimeType: file.type || "image/jpeg",
-        fileName: file.name || ("image_" + Date.now())
+        fileName: file.name || "image.jpg"
       });
 
       if (!res.ok) throw new Error(res.error || "Upload failed");
 
-      // שומרים URL בגיליון דרך imageUrl
-      if (imgHidden) imgHidden.value = res.url || res.downloadUrl || "";
-
+      if (imgHidden) imgHidden.value = res.url;
       if (imgInfo) imgInfo.textContent = "✓ תמונה עלתה";
       if (btnRemoveImg) btnRemoveImg.style.display = "inline-flex";
     } catch (e) {
-      if (imgHidden) imgHidden.value = "";
-      if (imgInfo) imgInfo.textContent = "";
-      if (imgPreview) {
-        imgPreview.src = "";
-        imgPreview.style.display = "none";
-      }
-      if (btnRemoveImg) btnRemoveImg.style.display = "none";
-      alert("שגיאה בהעלאת תמונה: " + e.message);
+      alert("שגיאה בהעלאה: " + e.message);
+      if (imgInfo) imgInfo.textContent = "שגיאה";
     }
   }
 
-  if (btnCamera && fileCamera) {
-    btnCamera.addEventListener("click", () => fileCamera.click());
-    fileCamera.addEventListener("change", () => handlePickedFile(fileCamera.files?.[0]));
-  }
-  if (btnGallery && fileGallery) {
-    btnGallery.addEventListener("click", () => fileGallery.click());
-    fileGallery.addEventListener("change", () => handlePickedFile(fileGallery.files?.[0]));
-  }
+  if (btnCamera) btnCamera.onclick = () => fileCamera.click();
+  if (btnGallery) btnGallery.onclick = () => fileGallery.click();
+  if (fileCamera) fileCamera.onchange = () => handlePickedFile(fileCamera.files[0]);
+  if (fileGallery) fileGallery.onchange = () => handlePickedFile(fileGallery.files[0]);
 
   if (btnRemoveImg) {
-    btnRemoveImg.addEventListener("click", () => {
+    btnRemoveImg.onclick = () => {
       if (imgHidden) imgHidden.value = "";
+      if (imgPreview) { imgPreview.src = ""; imgPreview.style.display = "none"; }
       if (imgInfo) imgInfo.textContent = "";
-      if (imgPreview) {
-        imgPreview.src = "";
-        imgPreview.style.display = "none";
-      }
       btnRemoveImg.style.display = "none";
-    });
+    };
   }
 
   if (btn) {
-    btn.addEventListener("click", async () => {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      if (statusMsg) statusMsg.textContent = "שולח...";
       try {
-        btn.disabled = true;
-        if (statusMsg) statusMsg.textContent = "שולח...";
-
         const payload = {
           site: siteName,
-          area: areaSel?.value || "",
-          type: typeSel?.value || "",
-          item: itemInp?.value || "",
-          desc: descInp?.value || "",
-          urgency: urgencySel?.value || "",
-          imageUrl: imgHidden?.value || "",
+          area: areaSel.value,
+          type: typeSel.value,
+          item: itemInp.value,
+          desc: descInp.value,
+          urgency: urgencySel.value,
+          imageUrl: imgHidden.value
         };
-
         const res = await apiCreate(payload);
-        if (!res.ok) throw new Error(res.error || "שליחה נכשלה");
-
-        if (areaSel) areaSel.value = "";
-        if (typeSel) typeSel.value = "";
-        if (urgencySel) urgencySel.value = "";
-        if (itemInp) itemInp.value = "";
-        if (descInp) descInp.value = "";
-
-        // איפוס תמונה
-        if (imgHidden) imgHidden.value = "";
-        if (imgInfo) imgInfo.textContent = "";
-        if (imgPreview) { imgPreview.src = ""; imgPreview.style.display = "none"; }
-        if (btnRemoveImg) btnRemoveImg.style.display = "none";
-
-        if (statusMsg) statusMsg.textContent = "✓ נשלח";
-        await refreshTable();
+        if (res.ok) {
+          if (statusMsg) statusMsg.textContent = "✓ נשלח בהצלחה";
+          [areaSel, typeSel, urgencySel, itemInp, descInp, imgHidden].forEach(f => { if (f) f.value = ""; });
+          if (imgPreview) imgPreview.style.display = "none";
+          if (imgInfo) imgInfo.textContent = "";
+          await refreshTable();
+        } else {
+          throw new Error(res.error);
+        }
       } catch (e) {
-        if (statusMsg) statusMsg.textContent = "";
-        alert(`שגיאה: ${e.message}`);
+        alert("שגיאה בשליחה: " + e.message);
       } finally {
         btn.disabled = false;
       }
-    });
+    };
   }
-
-  await refreshTable();
+  refreshTable();
 }
 
 // =====================================
@@ -397,25 +315,22 @@ function renderAllReportsTable(rows) {
   tbody.innerHTML = "";
 
   if (!rows || rows.length === 0) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="10" style="text-align:center;color:#6c757d;padding:14px;">אין נתונים להצגה</td>`;
-    tbody.appendChild(tr);
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">אין נתונים</td></tr>`;
     return;
   }
 
   for (const r of rows) {
     const tr = document.createElement("tr");
-    const hasImg = !!(r.imageUrl && String(r.imageUrl).trim());
-
+    const hasImg = !!(r.imageUrl && String(r.imageUrl).trim().startsWith("http"));
     const statusSelect = `
       <select class="statusSelect" data-id="${r.id}">
-        ${["חדש", "בטיפול", "טופל"].map(s => `<option value="${s}" ${r.status===s?"selected":""}>${s}</option>`).join("")}
+        ${["חדש", "בטיפול", "טופל"].map(s => `<option value="${s}" ${r.status === s ? "selected" : ""}>${s}</option>`).join("")}
       </select>
     `;
 
     tr.innerHTML = `
       <td>${formatTs(r.timestamp)}</td>
-      <td>${normalizeSite(r.site || "")}</td>
+      <td>${normalizeSite(r.site)}</td>
       <td>${r.area || ""}</td>
       <td>${r.type || ""}</td>
       <td>${r.desc || ""}</td>
@@ -423,113 +338,63 @@ function renderAllReportsTable(rows) {
       <td>${hasImg ? `<button class="imgBtn" data-url="${String(r.imageUrl)}">פתח</button>` : `<span class="muted">—</span>`}</td>
       <td>${statusSelect}</td>
       <td><button class="saveBtn" data-id="${r.id}">שמור</button></td>
-      <td><button class="delBtn" data-id="${r.id}">מחק</button></td>
+      <td><button class="delBtn" data-id="${r.id}" style="background:red; color:white;">מחק</button></td>
     `;
     tbody.appendChild(tr);
   }
 
-  tbody.querySelectorAll(".imgBtn").forEach(b => {
-    b.addEventListener("click", () => openImage(b.getAttribute("data-url")));
+  tbody.querySelectorAll(".imgBtn").forEach(b => b.onclick = () => openImage(b.getAttribute("data-url")));
+  
+  tbody.querySelectorAll(".saveBtn").forEach(b => {
+    b.onclick = async () => {
+      const id = b.dataset.id;
+      const status = tbody.querySelector(`.statusSelect[data-id="${id}"]`).value;
+      b.disabled = true;
+      const res = await apiUpdateStatus(id, status);
+      if (res.ok) { b.textContent = "✓"; setTimeout(() => b.textContent = "שמור", 1000); }
+      b.disabled = false;
+    };
   });
 
-  tbody.querySelectorAll(".saveBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-id");
-      const sel = document.querySelector(`.statusSelect[data-id="${id}"]`);
-      const newStatus = sel ? sel.value : "";
-
-      btn.disabled = true;
-      btn.textContent = "שומר...";
-      try {
-        const res = await apiUpdateStatus(id, newStatus);
-        if (!res.ok) throw new Error(res.error || "עדכון נכשל");
-        btn.textContent = "נשמר";
-        setTimeout(() => (btn.textContent = "שמור"), 800);
-      } catch (e) {
-        alert(`שגיאה: ${e.message}`);
-        btn.textContent = "שמור";
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  });
-
-  tbody.querySelectorAll(".delBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-id");
-      if (!confirm("למחוק את הדיווח הזה?")) return;
-
-      btn.disabled = true;
-      btn.textContent = "מוחק...";
-      try {
-        const res = await apiDeleteReport(id);
-        if (!res.ok) throw new Error(res.error || "מחיקה נכשלה");
-        btn.textContent = "נמחק";
-        // רענון מסך
-        location.reload();
-      } catch (e) {
-        alert(`שגיאה: ${e.message}`);
-        btn.textContent = "מחק";
-      } finally {
-        btn.disabled = false;
-      }
-    });
+  tbody.querySelectorAll(".delBtn").forEach(b => {
+    b.onclick = async () => {
+      if (!confirm("למחוק דיווח?")) return;
+      const res = await apiDeleteReport(b.dataset.id);
+      if (res.ok) location.reload();
+    };
   });
 }
 
 async function initAllReportsPage() {
-  if (!isAuthed()) {
-    const ok = promptPasswordOrFail();
-    if (!ok) {
-      location.href = "index.html";
-      return;
-    }
-  }
+  if (!isAuthed() && !promptPasswordOrFail()) { location.href = "index.html"; return; }
 
-  const filterSite = document.getElementById("filterSite");
-  const filterStatus = document.getElementById("filterStatus");
-  const runBtn = document.getElementById("runFilter");
+  const fSite = el("filterSite");
+  const fStatus = el("filterStatus");
+  const runBtn = el("runFilter");
 
-  if (filterSite) {
-    fillSelectOptions(filterSite, ["הכל", ...SITES.map(normalizeSite)]);
-    filterSite.value = "הכל";
-  }
-  if (filterStatus) {
-    fillSelectOptions(filterStatus, ["הכל", "חדש", "בטיפול", "טופל"]);
-    filterStatus.value = "הכל";
-  }
+  fillSelectOptions(fSite, ["הכל", ...SITES]);
+  fillSelectOptions(fStatus, ["הכל", "חדש", "בטיפול", "טופל"]);
 
   async function refresh() {
     const res = await apiGetList("");
-    if (!res.ok) throw new Error(res.error || "Failed to load all");
-    let rows = res.rows || res.data || [];
-
-    rows = rows.map(r => ({ ...r, site: normalizeSite(r.site || "") }));
-
-    const siteVal = filterSite?.value || "הכל";
-    const statusVal = filterStatus?.value || "הכל";
-
-    if (siteVal !== "הכל") rows = rows.filter(r => (r.site || "") === siteVal);
-    if (statusVal !== "הכל") rows = rows.filter(r => (r.status || "") === statusVal);
-
-    renderAllReportsTable(rows);
+    if (res.ok) {
+      let rows = res.rows;
+      if (fSite && fSite.value !== "הכל") rows = rows.filter(r => normalizeSite(r.site) === normalizeSite(fSite.value));
+      if (fStatus && fStatus.value !== "הכל") rows = rows.filter(r => r.status === fStatus.value);
+      renderAllReportsTable(rows);
+    }
   }
 
-  if (runBtn) {
-    runBtn.addEventListener("click", async () => {
-      try { await refresh(); } catch (e) { alert(e.message); }
-    });
-  }
-
-  await refresh();
+  if (runBtn) runBtn.onclick = refresh;
+  refresh();
 }
 
 // =====================================
-// Auto-init by page
+// Auto-init
 // =====================================
 document.addEventListener("DOMContentLoaded", () => {
-  const page = document.body.getAttribute("data-page");
+  const page = document.body.dataset.page;
   if (page === "index") initIndexPage();
-  if (page === "site") initSitePage();
-  if (page === "all") initAllReportsPage();
+  else if (page === "site") initSitePage();
+  else if (page === "all") initAllReportsPage();
 });
