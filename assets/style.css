@@ -93,10 +93,13 @@ main{
   font-weight:600;
 }
 
-.card-hover{ cursor:pointer; transition:transform .08s ease; }
-.card-hover:hover{ transform:translateY(-2px); }
+.container{
+  max-width:1100px;
+  margin:0 auto 40px;
+  padding:0 18px;
+}
 
-.panel{
+.card{
   background:var(--card);
   border:1px solid var(--border);
   border-radius:14px;
@@ -105,15 +108,9 @@ main{
   margin-top:16px;
 }
 
-.grid-3{
+.form-grid{
   display:grid;
   grid-template-columns:repeat(3, minmax(0,1fr));
-  gap:12px;
-}
-
-.grid-2{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0,1fr));
   gap:12px;
 }
 
@@ -152,22 +149,16 @@ button.secondary{
 }
 button.secondary:hover{ background:#0b1220; }
 
-/* תוספת כדי שתוכל להשתמש בכפתור "danger" בלי לפגוע בקיים */
-button.danger{ background:var(--danger); }
-button.danger:hover{ filter:brightness(.95); }
-
-.badge{
-  display:inline-block;
-  padding:4px 10px;
-  border-radius:999px;
-  font-weight:900;
-  font-size:12px;
-  border:1px solid var(--border);
-  background:#fff;
+button.danger{
+  background:var(--danger);
 }
-.badge.ok{ color:var(--ok); border-color:rgba(22,163,74,.35); }
-.badge.warn{ color:var(--warn); border-color:rgba(245,158,11,.35); }
-.badge.danger{ color:var(--danger); border-color:rgba(220,38,38,.35); }
+button.danger:hover{
+  filter:brightness(.92);
+}
+
+.muted{ color:var(--muted); font-weight:600; }
+
+.table-wrap{ overflow:auto; }
 
 .table{
   width:100%;
@@ -191,56 +182,29 @@ button.danger:hover{ filter:brightness(.95); }
 }
 .table tr:last-child td{ border-bottom:0; }
 
-.small-muted{ color:var(--muted); font-size:.92rem; }
-
-/* =========================
-   ✅ תוספות לתמונות (חדש)
-   ========================= */
 .img-actions{
   display:flex;
   gap:10px;
+  align-items:center;
   flex-wrap:wrap;
   margin-bottom:10px;
 }
-.img-preview-wrap{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  padding:10px 12px;
-  border:1px solid var(--border);
-  border-radius:12px;
-  background:#fff;
-}
-.img-preview{
-  width:84px;
-  height:84px;
-  border-radius:12px;
-  border:1px solid var(--border);
-  object-fit:cover;
-}
-.img-status{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.muted{ color:var(--muted); }
 
-/* כפתור צפייה קטן */
-.viewImgBtn{
-  background:#111827;
-  border-radius:10px;
-  padding:8px 10px;
-  font-weight:800;
-  color:#fff;
+.img-preview{
+  width:100%;
+  max-width:320px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  margin-top:8px;
 }
-.viewImgBtn:hover{ background:#0b1220; }
 
 @media (max-width: 900px){
   .sites-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
-  .grid-3{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .form-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
 }
 @media (max-width: 620px){
   header{ align-items:flex-start; flex-direction:column; }
   .sites-grid{ grid-template-columns:1fr; }
-  .grid-3, .grid-2{ grid-template-columns:1fr; }
+  .form-grid{ grid-template-columns:1fr; }
 }
