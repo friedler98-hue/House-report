@@ -1,91 +1,112 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>House Report - דירה</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="UTF-8">
+  <title>HouseReport - דירה</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body data-page="site">
-  <header>
-    <h1 id="siteTitle">מתקן:</h1>
-    <nav>
-      <a href="all_reports.html" id="allReportsLink">כל הדיווחים</a>
-      <a href="index.html">דף הבית</a>
-    </nav>
+
+  <header class="main-header">
+    <div class="header-content">
+      <h1 id="siteTitle">מתקן: טוען...</h1>
+      <nav>
+        <a href="all_reports.html">כל הדיווחים</a>
+        <a href="index.html">דף הבית</a>
+      </nav>
+    </div>
   </header>
 
   <main class="container">
-    <section class="card">
+    <section class="report-form card">
+      <h2>דיווח חדש</h2>
+      
       <div class="form-grid">
-        <div>
-          <label>אזור</label>
-          <select id="area"></select>
+        <div class="form-group">
+          <label for="area">אזור</label>
+          <select id="area">
+            <option value="">בחר...</option>
+            <option value="מטבח">מטבח</option>
+            <option value="סלון">סלון</option>
+            <option value="חדר שינה">חדר שינה</option>
+            <option value="שירותים">שירותים</option>
+            <option value="מקלחת">מקלחת</option>
+            <option value="מרפסת">מרפסת</option>
+            <option value="אחר">אחר</option>
+          </select>
         </div>
 
-        <div>
-          <label>סוג</label>
-          <select id="type"></select>
+        <div class="form-group">
+          <label for="type">סוג</label>
+          <select id="type">
+            <option value="">בחר...</option>
+            <option value="תקלה">תקלה</option>
+            <option value="חוסר">חוסר</option>
+          </select>
         </div>
 
-        <div>
-          <label>דחיפות</label>
-          <select id="urgency"></select>
+        <div class="form-group">
+          <label for="urgency">דחיפות</label>
+          <select id="urgency">
+            <option value="">בחר...</option>
+            <option value="נמוך">נמוך</option>
+            <option value="בינוני">בינוני</option>
+            <option value="גבוה">גבוה</option>
+          </select>
         </div>
 
-        <div>
-          <label>פריט</label>
-          <input id="item" placeholder="לדוגמה: נגרר הוילון / דלת / ברז..." />
+        <div class="form-group full-width">
+          <label for="item">פריט</label>
+          <input type="text" id="item" placeholder="לדוגמה: מקרר, ברז, מנורה...">
         </div>
 
-        <!-- ✅ תמונה אמיתית -->
-        <div style="grid-column: 1 / -1;">
+        <div class="form-group full-width">
+          <label for="desc">תיאור</label>
+          <textarea id="desc" rows="3" placeholder="מה הבעיה? מה חסר?"></textarea>
+        </div>
+
+        <div class="form-group full-width">
           <label>תמונה (אופציונלי)</label>
-
-          <div class="img-actions">
-            <button type="button" id="btnCamera" class="secondary">פתיחת מצלמה</button>
-            <button type="button" id="btnGallery" class="secondary">בחירת תמונה</button>
-            <button type="button" id="btnRemoveImg" class="danger" style="display:none;">הסר תמונה</button>
-            <span id="imgInfo" class="muted"></span>
+          <div class="image-actions">
+            <button type="button" id="btnCamera" class="btn-secondary">פתיחת מצלמה</button>
+            <button type="button" id="btnGallery" class="btn-secondary">בחירת תמונה</button>
           </div>
-
-          <input id="fileCamera" type="file" accept="image/*" capture="environment" style="display:none;" />
-          <input id="fileGallery" type="file" accept="image/*" style="display:none;" />
-
-          <img id="imgPreview" class="img-preview" style="display:none;" alt="תצוגה מקדימה" />
-
-          <!-- זה נשמר בגליון -->
-          <input id="imageUrl" type="hidden" />
-        </div>
-
-        <div style="grid-column: 1 / -1;">
-          <label>תיאור</label>
-          <textarea id="desc" rows="4" placeholder="מה הבעיה? מה חסר? איפה בדיוק?"></textarea>
+          <input type="file" id="fileCamera" accept="image/*" capture="environment" style="display:none">
+          <input type="file" id="fileGallery" accept="image/*" style="display:none">
+          
+          <div id="imgPreviewContainer" class="img-preview-container">
+            <img id="imgPreview" src="" alt="תצוגה מקדימה" style="display:none">
+            <span id="imgInfo"></span>
+            <button type="button" id="btnRemoveImg" class="btn-danger" style="display:none">הסר תמונה</button>
+          </div>
+          <input type="hidden" id="imageUrl">
         </div>
       </div>
 
-      <div class="actions">
-        <span id="statusMsg" class="muted"></span>
-        <button id="submitBtn" class="primary">שלח דיווח</button>
-      </div>
+      <button id="submitBtn" class="btn-primary">שלח דיווח</button>
+      <div id="statusMsg"></div>
     </section>
 
-    <section class="card">
+    <section class="recent-reports card">
       <h2>תקלות במתקן</h2>
-      <table id="siteTable" class="table">
-        <thead>
-          <tr>
-            <th>אזור</th>
-            <th>סוג</th>
-            <th>תיאור</th>
-            <th>דחיפות</th>
-            <th>סטטוס</th>
-            <th>זמן</th>
-            <th>תמונה</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrapper">
+        <table id="siteTable">
+          <thead>
+            <tr>
+              <th>אזור</th>
+              <th>סוג</th>
+              <th>תיאור</th>
+              <th>דחיפות</th>
+              <th>סטטוס</th>
+              <th>זמן</th>
+              <th>תמונה</th>
+            </tr>
+          </thead>
+          <tbody>
+            </tbody>
+        </table>
+      </div>
     </section>
   </main>
 
