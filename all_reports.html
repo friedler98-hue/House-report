@@ -1,41 +1,33 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>כל הדיווחים</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="UTF-8">
+  <title>HouseReport - כל הדיווחים</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body data-page="all">
-  <header>
-    <h1>כל הדיווחים</h1>
-    <nav>
-      <a href="all_reports.html" class="active">כל הדיווחים</a>
-      <a href="index.html">דף הבית</a>
-    </nav>
+
+  <header class="main-header">
+    <div class="header-content">
+      <h1>כל הדיווחים</h1>
+      <nav>
+        <a href="index.html">דף הבית</a>
+      </nav>
+    </div>
   </header>
 
-  <main>
-    <div class="card">
-      <div class="filters">
-        <div class="filter">
-          <label>סינון לפי דירה</label>
-          <select id="filterSite"></select>
-        </div>
-
-        <div class="filter">
-          <label>סטטוס</label>
-          <select id="filterStatus"></select>
-        </div>
-
-        <div class="filter">
-          <button id="runFilter">רענן</button>
-        </div>
+  <main class="container">
+    <section class="card">
+      <h2>סינון וניהול</h2>
+      <div class="filters" style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <select id="filterSite"><option value="הכל">כל הדירות</option></select>
+        <select id="filterStatus"><option value="הכל">כל הסטטוסים</option></select>
+        <button id="runFilter" class="btn-secondary" style="margin-right: auto;">סנן</button>
       </div>
 
-      <div class="table-wrap">
-        <table id="allTable" class="table">
+      <div class="table-wrapper">
+        <table id="allTable">
           <thead>
             <tr>
               <th>זמן</th>
@@ -46,14 +38,15 @@
               <th>דחיפות</th>
               <th>תמונה</th>
               <th>סטטוס</th>
-              <th>עדכון</th>
-              <th>מחיקה</th>
+              <th>שמור</th>
+              <th>מחק</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody>
+            </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </main>
 
   <script src="app.js"></script>
