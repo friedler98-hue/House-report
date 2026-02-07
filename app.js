@@ -1,3 +1,6 @@
+// =====================
+// FINAL CONSOLIDATED APP.JS
+// =====================
 const API_URL = "https://script.google.com/macros/s/AKfycbw8Yj6LoyYW7Po_WvQUlFHmfDZoEkpltQHoufKs0HzWBORLQBKbsa0OzwPFsPIiVl4Tcg/exec";
 const REPORTS_PASSWORD = "1234";
 
@@ -11,36 +14,23 @@ function normalizeSite(raw) {
   return m ? `דירת ${m[0]}` : s;
 }
 
-// פונקציית תקשורת עוקפת חסימות דפדפן (CORS)
+// פונקציה אחידה לשליחה (מונעת בעיות CORS)
 async function apiCall(action, payload = {}) {
-  const url = new URL(API_URL);
-  url.searchParams.set("action", action);
-  for (const [k, v] of Object.entries(payload)) {
-    if (v) url.searchParams.set(k, v);
-  }
-
-  // שימוש ב-mode: 'cors' וטיפול בשגיאות
   try {
-    const response = await fetch(url.toString());
-    const data = await response.json();
-    return data;
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, ...payload }),
+    });
+    const txt = await response.text();
+    return JSON.parse(txt);
   } catch (e) {
     console.error("API Error:", e);
-    return { ok: false, error: "בעיית תקשורת עם השרת" };
+    return { ok: false, error: e.toString() };
   }
 }
 
-// העלאת תמונה - שליחה ב-POST בגלל גודל הקובץ
-async function apiUploadImage(payload) {
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "uploadimage", ...payload }),
-  });
-  return await response.json();
-}
-
-// דף הבית - הצגת הדירות
+// דף הבית - תמיד מרנדר את הדירות מהקוד
 function initIndexPage() {
   const grid = document.querySelector(".sites-grid");
   if (!grid) return;
@@ -54,7 +44,7 @@ function initIndexPage() {
   });
 }
 
-// דף דירה - העלאת תמונה ושליחה
+// דף דירה - טיפול בתמונות ושליחה בטוחה
 async function initSitePage() {
   const siteName = normalizeSite(qs("site") || "");
   const title = document.getElementById("siteTitle");
@@ -63,26 +53,33 @@ async function initSitePage() {
   const imgInfo = document.getElementById("imgInfo");
   const imgPreview = document.getElementById("imgPreview");
   const imgHidden = document.getElementById("imageUrl");
+  const submitBtn = document.getElementById("submitBtn");
 
+  // העלאת תמונה
   const handleFile = async (file) => {
     if (!file) return;
+    submitBtn.disabled = true; // נועל כפתור עד סיום העלאה
     imgInfo.textContent = "מעלה תמונה...";
+    
     const reader = new FileReader();
     reader.onload = async (e) => {
       imgPreview.src = e.target.result;
       imgPreview.style.display = "block";
-      const res = await apiUploadImage({
+      
+      const res = await apiCall("uploadimage", {
         base64: e.target.result.split(",").pop(),
         mimeType: file.type,
         fileName: file.name
       });
+
       if (res.ok) {
         imgHidden.value = res.url;
         imgInfo.textContent = "✓ תמונה עלתה";
       } else {
-        alert("שגיאה: " + res.error);
+        alert("שגיאה בהעלאת תמונה: " + res.error);
         imgInfo.textContent = "שגיאה";
       }
+      submitBtn.disabled = false; // משחרר כפתור
     };
     reader.readAsDataURL(file);
   };
@@ -92,7 +89,11 @@ async function initSitePage() {
   document.getElementById("fileCamera").onchange = (e) => handleFile(e.target.files[0]);
   document.getElementById("fileGallery").onchange = (e) => handleFile(e.target.files[0]);
 
-  document.getElementById("submitBtn").onclick = async () => {
+  // שליחת הדיווח הסופי
+  submitBtn.onclick = async () => {
+    if (imgInfo.textContent === "מעלה תמונה...") return alert("אנא המתן לסיום העלאת התמונה");
+    
+    submitBtn.disabled = true;
     const payload = {
       site: siteName,
       area: document.getElementById("area").value,
@@ -100,22 +101,19 @@ async function initSitePage() {
       item: document.getElementById("item").value,
       desc: document.getElementById("desc").value,
       urgency: document.getElementById("urgency").value,
-      imageUrl: imgHidden.value
+      imageUrl: imgHidden.value, // כאן הקישור עובר לגיליון
+      status: "חדש"
     };
-    const res = await apiCall("createreport", payload);
-    if (res.ok) { alert("דיווח נשלח!"); location.href = "index.html"; }
-  };
 
-  // הצגת טבלה בדירה
-  const resList = await apiCall("list", { site: siteName });
-  if (resList.ok) {
-    const tbody = document.querySelector("#siteTable tbody");
-    resList.rows.forEach(r => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${r.area}</td><td>${r.type}</td><td>${r.desc}</td><td>${r.urgency}</td><td>${r.status}</td><td>${new Date(r.timestamp).toLocaleDateString()}</td><td>${r.imageUrl ? `<a href="${r.imageUrl}" target="_blank">פתח</a>` : "-"}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
+    const res = await apiCall("createreport", payload);
+    if (res.ok) {
+      alert("הדיווח נשלח בהצלחה!");
+      location.reload();
+    } else {
+      alert("שגיאה בשליחה: " + res.error);
+      submitBtn.disabled = false;
+    }
+  };
 }
 
 document.addEventListener("DOMContentLoaded", () => {
