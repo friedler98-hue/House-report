@@ -1,5 +1,5 @@
 // הוספת גרסה ל-URL כדי למנוע בעיות זיכרון דפדפן
-const API_URL = "https://script.google.com/macros/s/AKfycbw8Yj6LoyYW7Po_WvQUlFHmfDZoEkpltQHoufKs0HzWBORLQBKbsa0OzwPFsPIiVl4Tcg/exec?v=" + Date.now();
+const API_URL = "https://script.google.com/macros/s/AKfycbykC-hz-QrtHBTf5J55o1eAXXzxQA-z6DcRS3DCMCqam22uaP2vq-viorV6u52TRHEyag/exec?v=" + Date.now();
 
 async function apiCall(action, payload = {}) {
   try {
