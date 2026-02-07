@@ -65,7 +65,6 @@ async function apiCall(action, payload = {}) {
 // API wrappers
 // =====================================
 async function apiGetList(site = "") {
-  // בגלל מגבלות CORS, נשתמש ב-POST גם לקבלת רשימה
   return await apiCall("list", { site });
 }
 
@@ -82,7 +81,9 @@ async function apiDeleteReport(id) {
 }
 
 async function apiUploadImage({ base64, mimeType, fileName }) {
-  return await apiCall("uploadimage", { base64, mimeType, fileName });
+  // ניקוי ה-Base64 לפני השליחה
+  const cleanBase64 = base64.split(",").pop();
+  return await apiCall("uploadimage", { base64: cleanBase64, mimeType, fileName });
 }
 
 // =====================================
