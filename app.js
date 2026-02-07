@@ -1,7 +1,7 @@
 // =====================
 // CONFIG - לשנות רק פה
 // =====================
-const API_URL = "https://script.google.com/macros/s/AKfycby1RmWWgXc24smhU6BH7a8lC2QYrY2hBJXpM50EzkSZ5TObOrrXiMCwdKdpKFXUXNC4fQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw8Yj6LoyYW7Po_WvQUlFHmfDZoEkpltQHoufKs0HzWBORLQBKbsa0OzwPFsPIiVl4Tcg/exec";
 const REPORTS_PASSWORD = "1234";
 
 // רשימת הדירות שמופיעות במסך הבית
