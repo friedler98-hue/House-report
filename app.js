@@ -30,8 +30,20 @@ function promptPasswordOrFail() {
   return false;
 }
 
+// פונקציית תקשורת שמתאימה גם ל-GET (לקריאת נתונים) וגם ל-POST (לשליחה)
 async function apiCall(action, payload = {}) {
   try {
+    const url = new URL(API_URL);
+    url.searchParams.set("action", action);
+    
+    // אם זו פעולת רשימה, נשתמש ב-GET פשוט כדי לעקוף בעיות תצוגה
+    if (action === "list") {
+      if (payload.site) url.searchParams.set("site", payload.site);
+      const res = await fetch(url.toString());
+      return await res.json();
+    }
+
+    // לשאר הפעולות (יצירה/העלאה) נשתמש ב-POST
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -41,7 +53,7 @@ async function apiCall(action, payload = {}) {
     return JSON.parse(txt);
   } catch (e) {
     console.error("API Error:", e);
-    return { ok: false, error: "בעיית תקשורת" };
+    return { ok: false, error: "בעיית תקשורת עם הגיליון" };
   }
 }
 
@@ -78,50 +90,62 @@ async function initSitePage() {
   const title = document.getElementById("siteTitle");
   if (title) title.textContent = `מתקן: ${siteName}`;
 
+  const tbody = document.querySelector("#siteTable tbody");
+  
+  // טעינת הדיווחים הקיימים לדירה הספציפית
+  const loadSiteReports = async () => {
+    const res = await apiCall("list", { site: siteName });
+    if (res.ok && tbody) {
+      tbody.innerHTML = "";
+      res.rows.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.area || ""}</td>
+          <td>${r.type || ""}</td>
+          <td>${r.desc || ""}</td>
+          <td>${r.urgency || ""}</td>
+          <td><span class="badge-status">${r.status || ""}</span></td>
+          <td>${new Date(r.timestamp).toLocaleDateString('he-IL')}</td>
+          <td>${r.imageUrl ? `<a href="${r.imageUrl}" target="_blank" class="imgBtn">פתח</a>` : "-"}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  };
+
   const imgInfo = document.getElementById("imgInfo");
   const imgPreview = document.getElementById("imgPreview");
   const imgHidden = document.getElementById("imageUrl");
   const submitBtn = document.getElementById("submitBtn");
 
-  // פונקציית העלאת תמונה
   const handleFile = async (file) => {
     if (!file) return;
     submitBtn.disabled = true;
     imgInfo.textContent = "מעלה תמונה...";
-    
     const reader = new FileReader();
     reader.onload = async (e) => {
       if (imgPreview) { imgPreview.src = e.target.result; imgPreview.style.display = "block"; }
-      
       const res = await apiCall("uploadimage", {
         base64: e.target.result.split(",").pop(),
         mimeType: file.type,
         fileName: file.name
       });
-
       if (res.ok) {
         if (imgHidden) imgHidden.value = res.url;
         imgInfo.textContent = "✓ תמונה עלתה";
-      } else {
-        alert("שגיאה בהעלאה: " + res.error);
-        imgInfo.textContent = "שגיאה";
       }
       submitBtn.disabled = false;
     };
     reader.readAsDataURL(file);
   };
 
-  // הצמדת כפתורי מצלמה וגלריה
   if (document.getElementById("btnCamera")) document.getElementById("btnCamera").onclick = () => document.getElementById("fileCamera").click();
   if (document.getElementById("btnGallery")) document.getElementById("btnGallery").onclick = () => document.getElementById("fileGallery").click();
   if (document.getElementById("fileCamera")) document.getElementById("fileCamera").onchange = (e) => handleFile(e.target.files[0]);
   if (document.getElementById("fileGallery")) document.getElementById("fileGallery").onchange = (e) => handleFile(e.target.files[0]);
 
-  // שליחת הטופס
   if (submitBtn) {
     submitBtn.onclick = async () => {
-      if (imgInfo && imgInfo.textContent === "מעלה תמונה...") return alert("אנא המתן לסיום העלאת התמונה");
-      
       submitBtn.disabled = true;
       const payload = {
         site: siteName,
@@ -133,17 +157,13 @@ async function initSitePage() {
         imageUrl: imgHidden ? imgHidden.value : "",
         status: "חדש"
       };
-
       const res = await apiCall("createreport", payload);
-      if (res.ok) {
-        alert("הדיווח נשלח בהצלחה!");
-        location.reload();
-      } else {
-        alert("שגיאה בשליחה: " + res.error);
-        submitBtn.disabled = false;
-      }
+      if (res.ok) { alert("נשלח בהצלחה!"); location.reload(); }
+      else { alert("שגיאה"); submitBtn.disabled = false; }
     };
   }
+
+  loadSiteReports();
 }
 
 // =====================================
@@ -152,31 +172,26 @@ async function initSitePage() {
 async function initAllReportsPage() {
   if (!isAuthed() && !promptPasswordOrFail()) { location.href = "index.html"; return; }
 
-  async function loadAll() {
-    const res = await apiCall("list");
-    if (res.ok) renderAllTable(res.rows);
-  }
-
-  function renderAllTable(rows) {
-    const tbody = document.querySelector("#allTable tbody");
-    if (!tbody) return;
+  const tbody = document.querySelector("#allTable tbody");
+  const res = await apiCall("list");
+  
+  if (res.ok && tbody) {
     tbody.innerHTML = "";
-    rows.forEach(r => {
+    res.rows.forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${r.timestamp}</td>
+        <td>${new Date(r.timestamp).toLocaleDateString('he-IL')}</td>
         <td>${r.site}</td>
         <td>${r.area}</td>
+        <td>${r.type}</td>
         <td>${r.desc}</td>
         <td>${r.urgency}</td>
-        <td>${r.status}</td>
         <td>${r.imageUrl ? `<a href="${r.imageUrl}" target="_blank">פתח</a>` : "-"}</td>
+        <td>${r.status}</td>
       `;
       tbody.appendChild(tr);
     });
   }
-
-  loadAll();
 }
 
 // =====================================
