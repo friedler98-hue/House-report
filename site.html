@@ -38,29 +38,24 @@
           <input id="item" placeholder="לדוגמה: נגרר הוילון / דלת / ברז..." />
         </div>
 
-        <!-- ✅ העלאת תמונה (חדש) -->
+        <!-- ✅ תמונה אמיתית -->
         <div style="grid-column: 1 / -1;">
           <label>תמונה (אופציונלי)</label>
 
           <div class="img-actions">
-            <button type="button" id="btnTakePhoto" class="secondary">פתיחת מצלמה</button>
-            <button type="button" id="btnChoosePhoto" class="secondary">בחירת תמונה</button>
-            <button type="button" id="btnRemovePhoto" class="danger" style="display:none;">הסר תמונה</button>
+            <button type="button" id="btnCamera" class="secondary">פתיחת מצלמה</button>
+            <button type="button" id="btnGallery" class="secondary">בחירת תמונה</button>
+            <button type="button" id="btnRemoveImg" class="danger" style="display:none;">הסר תמונה</button>
+            <span id="imgInfo" class="muted"></span>
           </div>
 
-          <!-- קלטים מוסתרים -->
-          <input id="fileCamera" type="file" accept="image/*" capture="environment" style="display:none;">
-          <input id="fileGallery" type="file" accept="image/*" style="display:none;">
+          <input id="fileCamera" type="file" accept="image/*" capture="environment" style="display:none;" />
+          <input id="fileGallery" type="file" accept="image/*" style="display:none;" />
 
-          <!-- נשמור פה את ה-URL לאחר העלאה -->
-          <input id="imageUrl" type="hidden" value="">
+          <img id="imgPreview" class="img-preview" style="display:none;" alt="תצוגה מקדימה" />
 
-          <div class="img-preview-wrap" style="display:none;">
-            <img id="imgPreview" alt="תצוגה מקדימה" class="img-preview">
-            <div class="img-status">
-              <span id="imgUploadStatus" class="muted"></span>
-            </div>
-          </div>
+          <!-- זה נשמר בגליון -->
+          <input id="imageUrl" type="hidden" />
         </div>
 
         <div style="grid-column: 1 / -1;">
@@ -77,7 +72,7 @@
 
     <section class="card">
       <h2>תקלות במתקן</h2>
-      <table id="siteTable">
+      <table id="siteTable" class="table">
         <thead>
           <tr>
             <th>אזור</th>
@@ -85,8 +80,8 @@
             <th>תיאור</th>
             <th>דחיפות</th>
             <th>סטטוס</th>
-            <th>תמונה</th>
             <th>זמן</th>
+            <th>תמונה</th>
           </tr>
         </thead>
         <tbody></tbody>
