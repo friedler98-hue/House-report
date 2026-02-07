@@ -1,98 +1,98 @@
-// =====================
-// FINAL STABLE APP.JS
-// =====================
 const API_URL = "https://script.google.com/macros/s/AKfycbw8Yj6LoyYW7Po_WvQUlFHmfDZoEkpltQHoufKs0HzWBORLQBKbsa0OzwPFsPIiVl4Tcg/exec";
 const REPORTS_PASSWORD = "1234";
 
 const SITES = ["דירת 50", "דירת 55", "דירת 56", "דירת 51", "דירת 95", "דירת 45", "דירת 42", "דירת 500", "דירת 800", "דירת 900"];
 
+// Helpers
 function qs(name) { return new URLSearchParams(location.search).get(name); }
-
 function normalizeSite(raw) {
   const s = (raw || "").toString().trim();
   const m = s.match(/\d+/);
   return m ? `דירת ${m[0]}` : s;
 }
 
-// פונקציית תקשורת אמינה
+// פונקציית תקשורת עוקפת חסימות דפדפן (CORS)
 async function apiCall(action, payload = {}) {
+  const url = new URL(API_URL);
+  url.searchParams.set("action", action);
+  for (const [k, v] of Object.entries(payload)) {
+    if (v) url.searchParams.set(k, v);
+  }
+
+  // שימוש ב-mode: 'cors' וטיפול בשגיאות
   try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      mode: "no-cors", // פותר בעיות דפדפן מול גוגל
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action, ...payload }),
-    });
-    // בגלל no-cors, לא נוכל לקרוא את התשובה ישירות, אבל הנתונים יישלחו
-    return { ok: true }; 
+    const response = await fetch(url.toString());
+    const data = await response.json();
+    return data;
   } catch (e) {
-    return { ok: false, error: e.toString() };
+    console.error("API Error:", e);
+    return { ok: false, error: "בעיית תקשורת עם השרת" };
   }
 }
 
-// פונקציה ייעודית להעלאת תמונה שנועדה לעקוף את חסימת ההרשאות
+// העלאת תמונה - שליחה ב-POST בגלל גודל הקובץ
 async function apiUploadImage(payload) {
   const response = await fetch(API_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({ action: "uploadimage", ...payload }),
   });
-  const txt = await response.text();
-  return JSON.parse(txt);
+  return await response.json();
 }
 
-async function handlePickedFile(file) {
+// דף הבית - הצגת הדירות
+function initIndexPage() {
+  const grid = document.querySelector(".sites-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  SITES.forEach(s => {
+    const a = document.createElement("a");
+    a.className = "site-card";
+    a.href = `site.html?site=${encodeURIComponent(s)}`;
+    a.innerHTML = `<span>${s.replace("דירת ", "")} דירה</span><small>כניסה לדיווח</small>`;
+    grid.appendChild(a);
+  });
+}
+
+// דף דירה - העלאת תמונה ושליחה
+async function initSitePage() {
+  const siteName = normalizeSite(qs("site") || "");
+  const title = document.getElementById("siteTitle");
+  if (title) title.textContent = `מתקן: ${siteName}`;
+
   const imgInfo = document.getElementById("imgInfo");
   const imgPreview = document.getElementById("imgPreview");
   const imgHidden = document.getElementById("imageUrl");
 
-  if (!file) return;
-  imgInfo.textContent = "מעלה תמונה...";
-
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    imgPreview.src = e.target.result;
-    imgPreview.style.display = "block";
-    
-    const base64Data = e.target.result.split(",").pop();
-    try {
+  const handleFile = async (file) => {
+    if (!file) return;
+    imgInfo.textContent = "מעלה תמונה...";
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      imgPreview.src = e.target.result;
+      imgPreview.style.display = "block";
       const res = await apiUploadImage({
-        base64: base64Data,
+        base64: e.target.result.split(",").pop(),
         mimeType: file.type,
         fileName: file.name
       });
-
       if (res.ok) {
         imgHidden.value = res.url;
         imgInfo.textContent = "✓ תמונה עלתה";
       } else {
-        throw new Error(res.error);
+        alert("שגיאה: " + res.error);
+        imgInfo.textContent = "שגיאה";
       }
-    } catch (err) {
-      alert("שגיאת הרשאה או גודל: " + err.message);
-      imgInfo.textContent = "שגיאה";
-    }
+    };
+    reader.readAsDataURL(file);
   };
-  reader.readAsDataURL(file);
-}
 
-function initSitePage() {
-  const siteName = normalizeSite(qs("site") || "");
-  const titleEl = document.getElementById("siteTitle");
-  if (titleEl) titleEl.textContent = `מתקן: ${siteName}`;
-
-  const fileCamera = document.getElementById("fileCamera");
-  const fileGallery = document.getElementById("fileGallery");
-
-  if (document.getElementById("btnCamera")) document.getElementById("btnCamera").onclick = () => fileCamera.click();
-  if (document.getElementById("btnGallery")) document.getElementById("btnGallery").onclick = () => fileGallery.click();
-  
-  if (fileCamera) fileCamera.onchange = () => handlePickedFile(fileCamera.files[0]);
-  if (fileGallery) fileGallery.onchange = () => handlePickedFile(fileGallery.files[0]);
+  document.getElementById("btnCamera").onclick = () => document.getElementById("fileCamera").click();
+  document.getElementById("btnGallery").onclick = () => document.getElementById("fileGallery").click();
+  document.getElementById("fileCamera").onchange = (e) => handleFile(e.target.files[0]);
+  document.getElementById("fileGallery").onchange = (e) => handleFile(e.target.files[0]);
 
   document.getElementById("submitBtn").onclick = async () => {
-    const btn = document.getElementById("submitBtn");
-    btn.disabled = true;
     const payload = {
       site: siteName,
       area: document.getElementById("area").value,
@@ -100,17 +100,26 @@ function initSitePage() {
       item: document.getElementById("item").value,
       desc: document.getElementById("desc").value,
       urgency: document.getElementById("urgency").value,
-      imageUrl: document.getElementById("imageUrl").value,
-      status: "חדש"
+      imageUrl: imgHidden.value
     };
-    
-    // שליחת הדיווח
-    await apiCall("createreport", payload);
-    alert("הדיווח נשלח! (יעודכן בגיליון תוך כמה שניות)");
-    location.reload();
+    const res = await apiCall("createreport", payload);
+    if (res.ok) { alert("דיווח נשלח!"); location.href = "index.html"; }
   };
+
+  // הצגת טבלה בדירה
+  const resList = await apiCall("list", { site: siteName });
+  if (resList.ok) {
+    const tbody = document.querySelector("#siteTable tbody");
+    resList.rows.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${r.area}</td><td>${r.type}</td><td>${r.desc}</td><td>${r.urgency}</td><td>${r.status}</td><td>${new Date(r.timestamp).toLocaleDateString()}</td><td>${r.imageUrl ? `<a href="${r.imageUrl}" target="_blank">פתח</a>` : "-"}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (document.body.dataset.page === "site") initSitePage();
+  const page = document.body.dataset.page;
+  if (page === "index") initIndexPage();
+  if (page === "site") initSitePage();
 });
