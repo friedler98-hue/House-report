@@ -1,26 +1,24 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>HouseReport - דף הבית</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>House Report - דף הבית</title>
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
-<body data-page="index">
 
-  <header class="main-header">
-    <div class="header-content">
-      <h1>HouseReport - בחר מתקן</h1>
-    </div>
+<body data-page="index">
+  <header>
+    <h1>בחר מתקן</h1>
+    <nav>
+      <a href="all_reports.html" id="allReportsLink">כל הדיווחים</a>
+      <a href="index.html" class="active">דף הבית</a>
+    </nav>
   </header>
 
-  <main class="container">
-    <div class="sites-grid">
-      </div>
-
-    <div style="margin-top: 40px; text-align: center;">
-      <a href="all_reports.html" id="allReportsLink" style="color: #7f8c8d; text-decoration: none; font-size: 0.9rem;">ניהול: כל הדיווחים</a>
-    </div>
+  <main>
+    <p class="subtitle">בחר את הדירה כדי להיכנס לדיווח תקלות או לצפייה בדיווחים קיימים</p>
+    <div class="sites-grid"></div>
   </main>
 
   <script src="app.js"></script>
