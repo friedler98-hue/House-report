@@ -317,6 +317,31 @@ function renderAllReportsTable(rows) {
       <td>${statusSelect}</td>
       <td><button class="saveBtn" data-id="${r.id}">שמור</button></td>
     `;
+    // הוספת עמודת מחיקה לכל שורה בדף הניהול
+    const deleteTd = document.createElement("td");
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "מחק";
+    deleteBtn.style.backgroundColor = "#e74c3c";
+    deleteBtn.style.color = "white";
+    deleteBtn.style.border = "none";
+    deleteBtn.style.padding = "5px 10px";
+    deleteBtn.style.borderRadius = "4px";
+    deleteBtn.style.cursor = "pointer";
+
+    deleteBtn.onclick = async () => {
+      if (confirm("האם אתה בטוח שברצונך למחוק את הדיווח?")) {
+        const res = await apiCall("deletereport", { id: r.id });
+        if (res.ok) {
+          alert("הדיווח נמחק בהצלחה");
+          location.reload(); 
+        } else {
+          alert("שגיאה במחיקה: " + res.error);
+        }
+      }
+    };
+
+    deleteTd.appendChild(deleteBtn);
+    tr.appendChild(deleteTd);
     tbody.appendChild(tr);
   }
 
