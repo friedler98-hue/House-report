@@ -1,20 +1,36 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbykC-hz-QrtHBTf5J55o1eAXXzxQA-z6DcRS3DCMCqam22uaP2vq-viorV6u52TRHEyag/exec";
-const REPORTS_PASSWORD = "1234";
+// =====================
+// CONFIG - לשנות רק פה
+// =====================
+const API_URL = "https://script.google.com/macros/s/AKfycbxdJAq5l6Hym-50CBfBFVXgjgXm9gWe6mtqVXijE0nlnlt7hvIIXBgYoUfP25eVdjtY2A/exec";
+const REPORTS_PASSWORD = "1234"; // סיסמה ל"כל הדיווחים"
 
+// רשימת הדירות שמופיעות במסך הבית
 const SITES = [
-  "דירת 50", "דירת 55", "דירת 56", "דירת 51", "דירת 95",
-  "דירת 45", "דירת 42", "דירת 500", "דירת 800", "דירת 900",
+  "דירת 50",
+  "דירת 55",
+  "דירת 56",
+  "דירת 51",
+  "דירת 95",
+  "דירת 45",
+  "דירת 42",
+  "דירת 500",
+  "דירת 800",
+  "דירת 900",
 ];
 
+// =====================================
+// Helpers
+// =====================================
 function qs(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
+// מנרמל כל וריאציה של שם דירה לפורמט אחיד: "דירת <מספר>"
 function normalizeSite(raw) {
   const s = (raw || "").toString().trim();
   if (!s) return "";
   const m = s.match(/\d+/);
-  if (!m) return s;
+  if (!m) return s; // אם אין מספר - נחזיר כמו שזה
   return `דירת ${m[0]}`;
 }
 
@@ -41,23 +57,347 @@ function promptPasswordOrFail() {
 
 async function safeJson(res) {
   const txt = await res.text();
-  try { return JSON.parse(txt); } catch { return { ok: false, error: "Bad JSON", raw: txt }; }
+  try { return JSON.parse(txt); } catch { return { ok:false, error:"Bad JSON", raw: txt }; }
 }
 
+/**
+ * פונקציה אחידה שמנסה לדבר עם ה-API גם ב-GET וגם ב-POST
+ */
 async function apiCall(action, payload = {}) {
-  const body = JSON.stringify({ action, ...payload });
-  const response = await fetch(API_URL, {
+  // ניסיון 1: GET ?action=...
+  try {
+    const u = new URL(API_URL);
+    u.searchParams.set("action", action);
+    for (const [k, v] of Object.entries(payload)) {
+      if (v !== undefined && v !== null && v !== "") u.searchParams.set(k, v);
+    }
+    const r1 = await fetch(u.toString(), { method: "GET" });
+    const j1 = await safeJson(r1);
+    if (j1 && j1.ok) return j1;
+    // אם ok:false ננסה POST
+  } catch (e) {
+    // ממשיכים ל-POST
+  }
+
+  // ניסיון 2: POST JSON
+  const r2 = await fetch(API_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: body,
+    body: JSON.stringify({ action, ...payload }),
   });
-  return await safeJson(response);
+  return await safeJson(r2);
+}
+
+// =====================================
+// API wrappers
+// =====================================
+async function apiPing() {
+  return await apiCall("ping", {});
 }
 
 async function apiGetList(site = "") {
-  const url = `${API_URL}?action=list&site=${encodeURIComponent(site)}`;
-  const response = await fetch(url);
-  return await safeJson(response);
+  // אם site ריק → כל הדיווחים
+  return await apiCall("list", { site });
 }
 
-// שאר הפונקציות המקוריות של האתר כפי שהיו...
+async function apiCreate(payload) {
+  // יצירת דיווח
+  return await apiCall("createreport", payload);
+}
+
+async function apiUpdateStatus(id, status) {
+  // עדכון סטטוס
+  return await apiCall("updatestatus", { id, status });
+}
+
+// =====================================
+// UI: Index page
+// =====================================
+function renderSitesGrid(container) {
+  container.innerHTML = "";
+  for (const s of SITES) {
+    const a = document.createElement("a");
+    a.className = "site-card";
+    a.href = `site.html?site=${encodeURIComponent(s)}`;
+    a.innerHTML = `
+      <span>${s.replace("דירת ", "")} דירה</span>
+      <small>כניסה לדיווח</small>
+    `;
+    container.appendChild(a);
+  }
+}
+
+function initIndexPage() {
+  const grid = document.querySelector(".sites-grid");
+  if (grid) renderSitesGrid(grid);
+
+  const allReportsLink = document.getElementById("allReportsLink");
+  if (allReportsLink) {
+    allReportsLink.addEventListener("click", (e) => {
+      if (!isAuthed()) {
+        const ok = promptPasswordOrFail();
+        if (!ok) e.preventDefault();
+      }
+    });
+  }
+}
+
+// =====================================
+// UI: Site page (דירה ספציפית)
+// =====================================
+function el(id) { return document.getElementById(id); }
+
+function fillSelectOptions(select, options) {
+  select.innerHTML = "";
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = "בחר...";
+  select.appendChild(opt0);
+  for (const o of options) {
+    const opt = document.createElement("option");
+    opt.value = o;
+    opt.textContent = o;
+    select.appendChild(opt);
+  }
+}
+
+function renderSiteTable(rows) {
+  const tbody = document.querySelector("#siteTable tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (!rows || rows.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="6" style="text-align:center;color:#6c757d;padding:14px;">אין דיווחים עדיין</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.area || ""}</td>
+      <td>${r.type || ""}</td>
+      <td>${r.desc || ""}</td>
+      <td>${r.urgency || ""}</td>
+      <td><span class="badge-status">${r.status || ""}</span></td>
+      <td>${formatTs(r.timestamp)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+// מסדר timestamps אם מגיעים ב-ISO או טקסט
+function formatTs(ts) {
+  if (!ts) return "";
+  const s = ts.toString();
+  if (s.includes("T")) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}, ${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+    }
+  }
+  return s;
+}
+
+/**
+ * ✅ התיקון המרכזי:
+ * לא מבקשים מה-Apps Script לסנן לפי site,
+ * אלא מביאים את כל הדיווחים ומסננים פה לפי נרמול.
+ */
+async function loadSiteReports(siteName) {
+  const fixedSite = normalizeSite(siteName);
+
+  const res = await apiGetList(""); // כל הדיווחים
+  if (!res.ok) throw new Error(res.error || "Failed to load");
+
+  const rows = res.rows || res.data || [];
+  return rows.filter(r => normalizeSite(r.site || "") === fixedSite);
+}
+
+async function initSitePage() {
+  const rawSiteName = qs("site") || "";
+  const siteName = normalizeSite(rawSiteName);
+
+  const title = document.getElementById("siteTitle");
+  if (title) title.textContent = `מתקן: ${siteName}`;
+
+  // טופס
+  const areaSel = el("area");
+  const typeSel = el("type");
+  const urgencySel = el("urgency");
+  const itemInp = el("item");
+  const descInp = el("desc");
+  const imgInp = el("imageUrl");
+  const btn = el("submitBtn");
+  const statusMsg = el("statusMsg");
+
+  if (areaSel) fillSelectOptions(areaSel, ["מטבח", "סלון", "חדר שינה", "שירותים", "מקלחת", "מרפסת", "אחר"]);
+  if (typeSel) fillSelectOptions(typeSel, ["תקלה", "חוסר"]);
+  if (urgencySel) fillSelectOptions(urgencySel, ["נמוך", "בינוני", "גבוה"]);
+
+  async function refreshTable() {
+    const rows = await loadSiteReports(siteName);
+    renderSiteTable(rows);
+  }
+
+  if (btn) {
+    btn.addEventListener("click", async () => {
+      try {
+        btn.disabled = true;
+        if (statusMsg) statusMsg.textContent = "שולח...";
+
+        const payload = {
+          site: siteName, // נשמור תמיד בפורמט מנורמל
+          area: areaSel?.value || "",
+          type: typeSel?.value || "",
+          item: itemInp?.value || "",
+          desc: descInp?.value || "",
+          urgency: urgencySel?.value || "",
+          imageUrl: imgInp?.value || "",
+        };
+
+        const res = await apiCreate(payload);
+        if (!res.ok) throw new Error(res.error || "שליחה נכשלה");
+
+        // ניקוי
+        if (areaSel) areaSel.value = "";
+        if (typeSel) typeSel.value = "";
+        if (urgencySel) urgencySel.value = "";
+        if (itemInp) itemInp.value = "";
+        if (descInp) descInp.value = "";
+        if (imgInp) imgInp.value = "";
+
+        if (statusMsg) statusMsg.textContent = "✓ נשלח";
+        await refreshTable();
+      } catch (e) {
+        if (statusMsg) statusMsg.textContent = "";
+        alert(`שגיאה: ${e.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  await refreshTable();
+}
+
+// =====================================
+// UI: All reports page (כל הדיווחים)
+// =====================================
+function renderAllReportsTable(rows) {
+  const tbody = document.querySelector("#allTable tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (!rows || rows.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="8" style="text-align:center;color:#6c757d;padding:14px;">אין נתונים להצגה</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+
+    const statusSelect = `
+      <select class="statusSelect" data-id="${r.id}">
+        ${["חדש", "בטיפול", "טופל"].map(s => `<option value="${s}" ${r.status===s?"selected":""}>${s}</option>`).join("")}
+      </select>
+    `;
+
+    tr.innerHTML = `
+      <td>${formatTs(r.timestamp)}</td>
+      <td>${normalizeSite(r.site || "")}</td>
+      <td>${r.area || ""}</td>
+      <td>${r.type || ""}</td>
+      <td>${r.desc || ""}</td>
+      <td>${r.urgency || ""}</td>
+      <td>${statusSelect}</td>
+      <td><button class="saveBtn" data-id="${r.id}">שמור</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  document.querySelectorAll(".saveBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-id");
+      const sel = document.querySelector(`.statusSelect[data-id="${id}"]`);
+      const newStatus = sel ? sel.value : "";
+
+      btn.disabled = true;
+      btn.textContent = "שומר...";
+      try {
+        const res = await apiUpdateStatus(id, newStatus);
+        if (!res.ok) throw new Error(res.error || "עדכון נכשל");
+        btn.textContent = "נשמר";
+        setTimeout(() => (btn.textContent = "שמור"), 800);
+      } catch (e) {
+        alert(`שגיאה: ${e.message}`);
+        btn.textContent = "שמור";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+async function initAllReportsPage() {
+  // סיסמה
+  if (!isAuthed()) {
+    const ok = promptPasswordOrFail();
+    if (!ok) {
+      location.href = "index.html";
+      return;
+    }
+  }
+
+  const filterSite = document.getElementById("filterSite");
+  const filterStatus = document.getElementById("filterStatus");
+  const runBtn = document.getElementById("runFilter");
+
+  if (filterSite) {
+    fillSelectOptions(filterSite, ["הכל", ...SITES.map(normalizeSite)]);
+    filterSite.value = "הכל";
+  }
+  if (filterStatus) {
+    fillSelectOptions(filterStatus, ["הכל", "חדש", "בטיפול", "טופל"]);
+    filterStatus.value = "הכל";
+  }
+
+  async function refresh() {
+    const res = await apiGetList(""); // כל הדיווחים
+    if (!res.ok) throw new Error(res.error || "Failed to load all");
+    let rows = res.rows || res.data || [];
+
+    // מנרמלים כדי שסינונים יעבדו תמיד
+    rows = rows.map(r => ({ ...r, site: normalizeSite(r.site || "") }));
+
+    const siteVal = filterSite?.value || "הכל";
+    const statusVal = filterStatus?.value || "הכל";
+
+    if (siteVal !== "הכל") rows = rows.filter(r => (r.site || "") === siteVal);
+    if (statusVal !== "הכל") rows = rows.filter(r => (r.status || "") === statusVal);
+
+    renderAllReportsTable(rows);
+  }
+
+  if (runBtn) {
+    runBtn.addEventListener("click", async () => {
+      try { await refresh(); } catch (e) { alert(e.message); }
+    });
+  }
+
+  await refresh();
+}
+
+// =====================================
+// Auto-init by page
+// =====================================
+document.addEventListener("DOMContentLoaded", () => {
+  const page = document.body.getAttribute("data-page");
+  if (page === "index") initIndexPage();
+  if (page === "site") initSitePage();
+  if (page === "all") initAllReportsPage();
+});
